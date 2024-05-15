@@ -7,3 +7,5 @@ SilouetteComps/
 *.pkl
 *.png
 *.eml
+*.norg
+*.txt
