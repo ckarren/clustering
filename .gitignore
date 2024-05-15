@@ -1,0 +1,9 @@
+OutputFiles/
+InputFiles/
+RadiusComps/
+SilouetteComps/
+
+*.csv
+*.pkl
+*.png
+*.eml

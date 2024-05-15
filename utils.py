@@ -285,11 +285,11 @@ def groupby_season(df):
     #  by_season_we.reset_index(drop=True, inplace=True)
 
     return by_season_wd#, by_season_we
- 
+
 def analyse_dtw(n_clusters):
     """ Returns the number of members in each cluster, for radii 1-5"""
     li = []
-    all_files = glob.glob(str('./4_DTW_results_scaled_r[1-5].csv'))
+    all_files = glob.glob(str('./[4-5]_DTW_results_scaled_r[1-5].csv'))
     for filename in all_files:
         df = pd.read_csv(
             filename,
@@ -321,8 +321,10 @@ def analyse_dtw(n_clusters):
 
     return df
 
-#  n = df.apply(lambda x: x.value_counts())
+
 #  def plot_clusters(df):
+
+
     #  fig = make_subplots(rows=1, cols=i)
     #  for yi in range(i):
         #  for xx in X_train[y_pred == yi]:
