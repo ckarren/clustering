@@ -1,4 +1,7 @@
 OutputFiles/
+InputFiles/
+RadiusComps/
+"Silouette Comps/"
 
 *.csv
 *.png
