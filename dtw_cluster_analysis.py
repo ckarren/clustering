@@ -13,23 +13,28 @@ file = (str('./InputFiles/y1_SFR_hourly.pkl'))
 df_use = pd.read_pickle(file)
 df_use_y = ut.groupby_year(df_use)
 df_use_m = ut.groupby_month(df_use)
-df = ut.analyse_dtw(4)
+n_clusters = 4
+df = ut.analyse_dtw(n_clusters)
+radii = ['r1', 'r2', 'r3', 'r4', 'r5']
+clusters = list(range(n_clusters))
 
-r1 = df['r1']
-r1_cluster0 = [str(x) for x in r1[r1 == 3].index.to_list()]
-df_use_r1c0 =  df_use_y.filter(items=r1_cluster0)
-r1c0_total = df_use_r1c0.sum(axis=1)
-r1c0_average = df_use_r1c0.mean(axis=1)
+for r in radii:
+    radius = df[r]
+    for c in clusters:
+        cluster = [str(x) for x in radius[radius == c].index.to_list()]
+        df_use_rc =  df_use_y.filter(items=cluster)
+        total = df_use_rc.sum(axis=1)
+        average = df_use_rc.mean(axis=1)
 
-fig, ax = plt.subplots()
-for i in df_use_r1c0.columns:
-    i = str(i)
-    ax.plot(df_use_r1c0.index, df_use_r1c0[i], c='grey')
-ax.set_title('Average hourly use for Cluster 4', fontsize=14)
-ax.set_xlabel('Time (hr)', fontsize=14)
-ax.set_ylabel('Volume (gallons)', fontsize=14)
-ax.plot(df_use_r1c0.index, r1c0_average, c='crimson')
-plt.show()
+        fig, ax = plt.subplots()
+        for i in df_use_rc.columns:
+            i = str(i)
+            ax.plot(df_use_rc.index, df_use_rc[i], c='grey')
+        ax.set_title(f'Average Use for Cluster {c}, radius {r}', fontsize=14)
+        ax.set_xlabel('Time (hr)', fontsize=14)
+        ax.set_ylabel('Volume (gallons)', fontsize=14)
+        ax.plot(df_use_rc.index, average, c='crimson')
+        plt.savefig(f'./RadiusComps/{n_clusters}_clusters_r{r}c{c}_average.png')
 
 # fig = go.Figure(data=[go.Scatter(x=df_use_r1c0.index, y=r1c0_average)])
 
