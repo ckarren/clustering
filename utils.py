@@ -288,65 +288,65 @@ def groupby_season(df):
 
 def analyse_dtw(n_clusters):
     """ Returns the number of members in each cluster, for radii 1-5"""
-    cluster_4 = {
-        'radius2': {
-            0: 0,
-            1: 3,
-            2: 1,
-            3: 2
-            },
-        'radius3': {
-            0:0,
-            1:1,
-            2:3,
-            3:2
-        },
-        'radius4': {
-            0:0,
-            1:3,
-            2:1,
-            3:2
-
-        },
-        'radius5': {
-            0:2,
-            1:0,
-            2:1,
-            3:3
-        }
-    }
-    cluster_5 = {
-        'radius2': {
-            0:1,
-            1:1,
-            2:0,
-            3:2,
-            4:3
-        },
-        'radius3': {
-            0:0,
-            1:1,
-            2:2,
-            3:3,
-            4:4
-        },
-        'radius4': {
-            0:2,
-            1:1,
-            2:0,
-            3:3,
-            4:4
-        },
-        'radius5': {
-            0:4,
-            1:2,
-            2:3,
-            3:1,
-            4:
-        }
-    }
+    #  cluster_4 = {
+        #  'radius2': {
+            #  0: 0,
+            #  1: 3,
+            #  2: 1,
+            #  3: 2
+            #  },
+        #  'radius3': {
+            #  0:0,
+            #  1:1,
+            #  2:3,
+            #  3:2
+        #  },
+        #  'radius4': {
+            #  0:0,
+            #  1:3,
+            #  2:1,
+            #  3:2
+#
+        #  },
+        #  'radius5': {
+            #  0:2,
+            #  1:0,
+            #  2:1,
+            #  3:3
+        #  }
+    #  }
+    #  cluster_5 = {
+        #  'radius2': {
+            #  0:1,
+            #  1:1,
+            #  2:0,
+            #  3:2,
+            #  4:3
+        #  },
+        #  'radius3': {
+            #  0:0,
+            #  1:1,
+            #  2:2,
+            #  3:3,
+            #  4:4
+        #  },
+        #  'radius4': {
+            #  0:2,
+            #  1:1,
+            #  2:0,
+            #  3:3,
+            #  4:4
+        #  },
+        #  'radius5': {
+            #  0:4,
+            #  1:2,
+            #  2:3,
+            #  3:1,
+            #  4:
+        #  }
+    #  }
     li = []
-    all_files = glob.glob(str(f'RadiusComps/{n_clusters}_DTW_results_scaled_r[1-5].csv'))
+    all_files = glob.glob(str(f'../{n_clusters}_DTW_results_scaled_r[1-5].csv'))
     for filename in all_files:
         df = pd.read_csv(
             filename,
@@ -367,18 +367,10 @@ def analyse_dtw(n_clusters):
         9: 'r5'
     }, inplace=True)
     df.set_index('User ID', inplace=True)
-    df['r2'] = df['r2'].apply(
-        lambda x: 2 if x == 0 else (4 if x == 3 else (3 if x == 2 else (2 if x == 0 else 1))))
-    #  df['r3'] = df['r3'].apply(
-        #  lambda x: 2 if x == 3 else (3 if x == 2 else (3 if x == 3 else 4)))
-    df['r4'] = df['r4'].apply(
-        lambda x: 0 if x == 2 else (2 if x == 0 else x))
-    df['r5'] = df['r5'].apply(
-        lambda x: 0 if x == 4 else (2 if x == 3 else (1 if x == 2 else (3 if x  == 1 else 2 if x == 0 else x))))
-
+    print(df.head())
     return df
 
-
+analyse_dtw(5)
 #  def plot_clusters(df):
 
 
