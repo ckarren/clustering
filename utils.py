@@ -367,7 +367,6 @@ def analyse_dtw(n_clusters):
         9: 'r5'
     }, inplace=True)
     df.set_index('User ID', inplace=True)
-    print(df.head())
     return df
 
 analyse_dtw(5)
