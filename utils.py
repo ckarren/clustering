@@ -405,3 +405,41 @@ analyse_dtw(5)
 #  water_use = pd.read_pickle(input_path + 'hourly_use_SFR_y1.pkl')
 #  months = groupby_season(water_use)[0]
 # print(months.columns)
+def compare_radius_means(n_clusters, radii=['r1', 'r2', 'r3', 'r4', 'r5']):
+    """ 
+    produces plots to compare the means of clusters using the DTW algorithm with
+    different radii of wrapping
+    n_clusters (int): the number of clusters used in the DTW algorithm
+    radii (list): list of """
+    df = ut.analyse_dtw(n_clusters)
+    radii = radii
+    clusters = list(range(n_clusters))
+
+    for r in radii:
+        radius = df[r]
+        fig, axs = plt.subplots(
+            1, n_clusters, 
+            figsize=(24, 6), 
+            sharex=True,
+            sharey=True,
+            layout='constrained')
+        for ci, c in enumerate(clusters):
+            cluster = [str(x) for x in radius[radius == c].index.to_list()]
+            df_use_rc =  df_use_y.filter(items=cluster)
+            total = df_use_rc.sum(axis=1)
+            average = df_use_rc.mean(axis=1)
+
+            #  for i in df_use_rc.columns:
+                #  i = str(i)
+                #  ax.plot(df_use_rc.index, df_use_rc[i], c='grey')
+            axs[ci].plot(df_use_rc.index, average, c='crimson')
+            #  ax[ci].set_title(f'Average Use for Cluster {c}, radius {r}', fontsize=14)
+            #  axs[ci].set_xlabel('Time (hr)', fontsize=fontsize)
+            #  axs[ci].set_ylabel('Volume (gallons)', fontsize=fontsize)
+        fig.supxlabel('Time (hr)', fontsize=fontsize)
+        fig.supylabel('Volume (gallons)', fontsize=fontsize)
+        fig.suptitle(f'{n_clusters} Cluster Averages, {r}', fontsize=tfontsize)
+        #  plt.show()
+
+
+ 
