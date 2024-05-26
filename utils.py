@@ -234,11 +234,16 @@ def groupby_month(df):
 
     return monthly_wd#, monthly_we
 
-def groupby_year(df):
+def groupby_year(df, op='mean'):
     weekdays, weekends = split_week(df)
 
-    annual_wd = weekdays.groupby(weekdays.index.hour).mean()
-    annual_we = weekends.groupby(weekends.index.hour).mean()
+    if op == 'mean':
+        annual_wd = weekdays.groupby(weekdays.index.hour).mean()
+        annual_we = weekends.groupby(weekends.index.hour).mean()
+    elif op == 'total':
+        annual_wd = weekdays.groupby(weekdays.index.hour).sum()
+        annual_we = weekends.groupby(weekends.index.hour).sum()
+
 
     annual_wd.reset_index(drop=True, inplace=True)
     annual_we.reset_index(drop=True, inplace=True)
@@ -369,7 +374,6 @@ def analyse_dtw(n_clusters):
     df.set_index('User ID', inplace=True)
     return df
 
-analyse_dtw(5)
 #  def plot_clusters(df):
 
 
