@@ -446,4 +446,36 @@ def compare_radius_means(n_clusters, radii=['r1', 'r2', 'r3', 'r4', 'r5']):
         #  plt.show()
 
 
- 
+def prepare_regression():
+    year1 = '../InputFiles/y1_SFR_hourly.pkl'
+    use_y1 = pd.read_pickle(year1)
+    df_y1 = pd.DataFrame(use_y1)
+    df_y1 = clean_outliers(df_y1)
+
+    year2 = '../InputFiles/y2_SFR_hourly.pkl'
+    use_y2 = pd.read_pickle(year2)
+    df_y2 = pd.DataFrame(use_y2)
+    df_y2 = clean_outliers(df_y2)
+
+    #  summer_wd = weekdays.loc[weekdays.index.month.isin(summer)].copy()
+    p1y1 = df_y1.loc[df_y1.index.month.isin([7, 8])].sum().apply(np.log)
+    p2y1 = df_y1.loc[df_y1.index.month.isin([9, 10])].sum().apply(np.log)
+    p3y1 = df_y1.loc[df_y1.index.month.isin([11, 12])].sum().apply(np.log)
+    p4y1 = df_y1.loc[df_y1.index.month.isin([1, 2])].sum().apply(np.log)
+    p5y1 = df_y1.loc[df_y1.index.month.isin([3, 4])].sum().apply(np.log)
+    p6y1 = df_y1.loc[df_y1.index.month.isin([5, 6])].sum().apply(np.log)
+
+    p1y2 = df_y2.loc[df_y2.index.month.isin([7, 8])].sum().apply(np.log)
+    p2y2 = df_y2.loc[df_y2.index.month.isin([9, 10])].sum().apply(np.log)
+    p3y2 = df_y2.loc[df_y2.index.month.isin([11, 12])].sum().apply(np.log)
+    p4y2 = df_y2.loc[df_y2.index.month.isin([1, 2])].sum().apply(np.log)
+    p5y2 = df_y2.loc[df_y2.index.month.isin([3, 4])].sum().apply(np.log)
+    p6y2 = df_y2.loc[df_y2.index.month.isin([5, 6])].sum().apply(np.log)
+
+    all_list = [p1y1, p2y1, p3y1, p4y1, p5y1, p6y1, p1y2, p2y2, p3y2, p4y2, p5y2, p6y2]
+    q_all = pd.concat(all_list, axis=1, join='inner')
+
+    print(q_all.shape)
+
+
+prepare_regression()
