@@ -48,9 +48,7 @@ def billed_18(q):
         p += 0 
     elif q >= 400:
         p += (q - 400) / 100  * 3.50
-    else:
-        p = p 
-    return round(p, 2) 
+    return round(p * 1.03, 2) 
 
 def billed_19(q):
     p = 18.40
@@ -60,9 +58,7 @@ def billed_19(q):
         p += (q - 300) / 100 * 2.89
     elif q >= 400: 
         p = p + 2.89 + (q - 400) / 100 * 3.50
-    else:
-        p = p 
-    return round(p, 2)  
+    return round(p * 1.03, 2)  
 
 def qFilter(xcol, miudf, q):
     """returns: q number of lists of MiuIds for specified attribute 'xcol' """
@@ -457,6 +453,10 @@ def prepare_regression():
     df_y2 = pd.DataFrame(use_y2)
     df_y2 = clean_outliers(df_y2)
 
+    bill = pd.read_pickle('../InputFiles/bill_all.pkl')
+    df_bill = pd.DataFrame(bill)
+    df_bill.index = df_bill.index.map(str)
+    
     #  summer_wd = weekdays.loc[weekdays.index.month.isin(summer)].copy()
     p1y1 = df_y1.loc[df_y1.index.month.isin([7, 8])].sum().apply(np.log)
     p2y1 = df_y1.loc[df_y1.index.month.isin([9, 10])].sum().apply(np.log)
@@ -473,9 +473,18 @@ def prepare_regression():
     p6y2 = df_y2.loc[df_y2.index.month.isin([5, 6])].sum().apply(np.log)
 
     all_list = [p1y1, p2y1, p3y1, p4y1, p5y1, p6y1, p1y2, p2y2, p3y2, p4y2, p5y2, p6y2]
-    q_all = pd.concat(all_list, axis=1, join='inner')
 
-    print(q_all.shape)
-
-
+    for i, d in enumerate(all_list):
+        all_list[i] = pd.concat([d, df_bill.iloc[:,i].apply(np.log)], axis=1)
+        all_list[i]['period'] = str(i+1)
+        all_list[i].columns = ['logQ', 'logP', 'period']
+#
+    q_all = pd.concat(all_list, axis=0, join='inner')
+    q_all = q_all.reset_index(names='user')
+    print(q_all.head())
 prepare_regression()
+def users():
+    users = pd.read_pickle('../InputFiles/user_ids.pkl')
+    users = [int(x) for x in users]
+    print(np.min(users))
+
