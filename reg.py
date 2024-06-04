@@ -8,10 +8,11 @@ from statsmodels.formula.api import ols
 import math
 
 
-use = pd.read_csv("/home/cade/Documents/Research/ABM/dynamic_pricing/py_files+data/qty_bill_all.csv")
+data = pd.read_pickle('reg_data_500_with_dummies.pkl')
+y = np.asarray(data['logQ'])
+#  X = np.asarray(data.loc[:, data.columns != 'logQ'])
+X = np.asarray(data['logP'])
+X = sm.add_constant(X)
+model = sm.OLS(y, X)
+results = model.fit()
 
-use["log_Q"] = 2*(use["Quantity"])
-#use_model = ols("Quantity ~ Billed", data=use).fit()
-#print(use_model.summary())
-
-print(use.head())

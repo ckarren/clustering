@@ -1,9 +1,9 @@
-import pandas as pd
+
 import glob
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
-
+import pandas as pd 
 
 def tot_col(dfx):
     dfx['Total'] = dfx.sum(axis=1) 
@@ -437,21 +437,20 @@ def compare_radius_means(n_clusters, radii=['r1', 'r2', 'r3', 'r4', 'r5']):
     fig.supylabel('Volume (gallons)', fontsize=fontsize)
     #  fig.suptitle(f'{n_clusters} Cluster Averages', fontsize=tfontsize)
     plt.show()
-compare_radius_means(n_clusters=5)
 
 
 def prepare_regression():
-    year1 = './InputFiles/y1_SFR_hourly.pkl'
+    year1 = '../InputFiles/y1_SFR_hourly.pkl'
     use_y1 = pd.read_pickle(year1)
     df_y1 = pd.DataFrame(use_y1)
     df_y1 = clean_outliers(df_y1)
 
-    year2 = './InputFiles/y2_SFR_hourly.pkl'
+    year2 = '../InputFiles/y2_SFR_hourly.pkl'
     use_y2 = pd.read_pickle(year2)
     df_y2 = pd.DataFrame(use_y2)
     df_y2 = clean_outliers(df_y2)
 
-    bill = pd.read_pickle('./InputFiles/bill_all.pkl')
+    bill = pd.read_pickle('../InputFiles/bill_all.pkl')
     df_bill = pd.DataFrame(bill)
     df_bill.index = df_bill.index.map(str)
     
@@ -479,20 +478,29 @@ def prepare_regression():
 
     q_all = pd.concat(all_list, axis=0, join='inner')
     q_all = q_all.reset_index(names='user')
-    q_all.to_pickle('reg_data.pkl')
+    print(len(pd.unique(q_all['user'])))
 
-def add_dummies():
-    file = 'reg_data.pkl'
+    #  q_all.to_pickle('reg_data_500.pkl')
+prepare_regression()
+
+def add_dummies(file='reg_data.pkl'):
+    file = file
     data = pd.read_pickle(
         file
     )
+    #  data = pd.get_dummies(
+        #  data = data,
+        #  columns=["user"],
+        #  drop_first=True,
+        #  dtype=float
+    #  )
     data = pd.get_dummies(
         data = data,
         columns=["user", "period"],
-        drop_first=True
+        drop_first=True,
+        dtype=float
     )
-    data.to_pickle('reg_data_with_dummies.pkl')
-
+    data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
 
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
