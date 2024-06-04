@@ -481,8 +481,21 @@ def prepare_regression():
 #
     q_all = pd.concat(all_list, axis=0, join='inner')
     q_all = q_all.reset_index(names='user')
-    print(q_all.head())
-prepare_regression()
+    q_all.to_pickle('reg_data.pkl')
+
+def add_dummies():
+    file = 'reg_data.pkl'
+    data = pd.read_pickle(
+        file
+    )
+    data = pd.get_dummies(
+        data = data,
+        columns=["user", "period"],
+        drop_first=True
+    )
+    data.to_pickle('reg_data_with_dummies.pkl')
+
+
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
     users = [int(x) for x in users]
