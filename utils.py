@@ -2,10 +2,8 @@ import pandas as pd
 import glob
 import numpy as np
 from scipy import stats
-from datetime import datetime, time, timedelta
+import matplotlib.pyplot as plt
 
-# df2['average'] = df2.mean(numeric_only=True, axis=1) #create column of average use
-# df2['total'] = df2.sum(axis=1)   #create column of cumulative use
 
 def tot_col(dfx):
     dfx['Total'] = dfx.sum(axis=1) 
@@ -126,43 +124,26 @@ def combine_filters(fd1, fd2):
     c = [str(value) for value in fd1 if value in fd2]
     return c
 
-#  def clean_outliers(df):
-    #  print(df.shape)
-    #  df = df[df.columns[(np.abs(stats.zscore(df, axis=1)) < 3).all(axis=0)]]
-    #  a = df.max(axis=None)
-    #  a = (np.abs(stats.zscore(df, axis=1)) < 3).all(axis=0)
-    #  df = df.iloc[:,0:8]
-    #  a = stats.zscore(df, axis=1)
-    #  a.iloc[1,2] = 5
-    #  print(a)
-    #  print((np.abs(a) < 3).all(axis=0))
-    #  b = (np.abs(a) < 3).all(axis=0)
-    #  print(b)
-    #  df = df[df.columns[b]]
-    #  print(df.shape)
-    #  return df
-def clean_outliers(df):
-    df = df[df.columns[~((df < 1.0).all(axis=0))]]
-    df = df[df.columns[~((df > 400.0).any(axis=0))]]
+def clean_outliers_sd(df):
+    df = df[df.columns[(np.abs(stats.zscore(df, axis=1)) < 3).all(axis=0)]]
+    a = df.max(axis=None)
+    a = (np.abs(stats.zscore(df, axis=1)) < 3).all(axis=0)
+    df = df.iloc[:,0:8]
+    a = stats.zscore(df, axis=1)
+    a.iloc[1,2] = 5
+    b = (np.abs(a) < 3).all(axis=0)
+    df = df[df.columns[b]]
+    return df
+
+
+def clean_outliers(df, lb=1.0, ub=400.0):
+    df = df[df.columns[~((df < lb).all(axis=0))]]
+    df = df[df.columns[~((df > ub).any(axis=0))]]
     return df
 
 def summary(df):
     a = stats.describe(df, axis=0)
     return a
-
-#  def clean_outliers(dfx, lb=0.03, ub=400):
-    #  dfx = dfx.loc[:, ((dfx != 0.0).any(axis=0))
-                   #  & ((dfx > lb).any(axis=0))
-                   #  & ((dfx < ub).all(axis=0))]
-    #  return dfx
-
-# for i in df_miu['MiuId']:
-#     if i not in list(df_use.columns):
-#         print(i)
-#         df_miu.drop(df_miu.index[df_miu['MiuId'] == i], inplace=True)
-
-# df_miu.to_csv('C:/Users/ckarren/OneDrive - North Carolina State University/Documents/DynamicPricing/dynamic_pricing/py_files+data/Python/CSV/lake_miu_lot_data_02.csv')
-
 
 def q1(dfx):
     return dfx.quantile(0.25)
@@ -289,65 +270,79 @@ def groupby_season(df):
 
 def analyse_dtw(n_clusters):
     """ Returns the number of members in each cluster, for radii 1-5"""
-    #  cluster_4 = {
-        #  'radius2': {
-            #  0: 0,
-            #  1: 3,
-            #  2: 1,
-            #  3: 2
-            #  },
-        #  'radius3': {
-            #  0:0,
-            #  1:1,
-            #  2:3,
-            #  3:2
-        #  },
-        #  'radius4': {
-            #  0:0,
-            #  1:3,
-            #  2:1,
-            #  3:2
-#
-        #  },
-        #  'radius5': {
-            #  0:2,
-            #  1:0,
-            #  2:1,
-            #  3:3
-        #  }
-    #  }
-    #  cluster_5 = {
-        #  'radius2': {
-            #  0:1,
-            #  1:1,
-            #  2:0,
-            #  3:2,
-            #  4:3
-        #  },
-        #  'radius3': {
-            #  0:0,
-            #  1:1,
-            #  2:2,
-            #  3:3,
-            #  4:4
-        #  },
-        #  'radius4': {
-            #  0:2,
-            #  1:1,
-            #  2:0,
-            #  3:3,
-            #  4:4
-        #  },
-        #  'radius5': {
-            #  0:4,
-            #  1:2,
-            #  2:3,
-            #  3:1,
-            #  4:
-        #  }
-    #  }
+    cluster_4 = {
+        'r1': {
+            0: 0,
+            1: 1,
+            2: 2,
+            3: 3
+            },
+        'r2': {
+            0: 0,
+            1: 2,
+            2: 3,
+            3: 1
+            },
+        'r3': {
+            0: 0,
+            1: 1,
+            2: 3,
+            3: 2
+        },
+        'r4': {
+            0:0,
+            1:2,
+            2:3,
+            3:1
+
+        },
+        'r5': {
+            0: 1,
+            1: 2,
+            2: 0,
+            3: 3
+        }
+    }
+    cluster_5 = {
+        'r1': {
+            0: 3,
+            1: 2,
+            2: 0,
+            3: 1,
+            4: 4
+        },
+        'r2': {
+            0: 4,
+            1: 2,
+            2: 1,
+            3: 0,
+            4: 3
+        },
+        'r3': {
+            0: 3,
+            1: 2,
+            2: 0,
+            3: 1,
+            4: 4
+        },
+        'r4': {
+            0: 0,
+            1: 2,
+            2: 3,
+            3: 1,
+            4: 4
+        },
+        'r5': {
+            0: 4,
+            1: 1,
+            2: 2,
+            3: 0,
+            4: 3
+        }
+    }
+    rename_dicts = [cluster_4, cluster_5]
     li = []
-    all_files = glob.glob(str(f'../{n_clusters}_DTW_results_scaled_r[1-5].csv'))
+    all_files = glob.glob(str(f'../RadiusComps/{n_clusters}_DTW_results_scaled_r[1-5].csv'))
     for filename in all_files:
         df = pd.read_csv(
             filename,
@@ -368,92 +363,95 @@ def analyse_dtw(n_clusters):
         9: 'r5'
     }, inplace=True)
     df.set_index('User ID', inplace=True)
+    for i, column in enumerate(df):
+        df[column] = df[column].map(rename_dicts[n_clusters-4][str(column)])
     return df
 
-#  def plot_clusters(df):
+def plot_clusters(df):
+    fig = make_subplots(rows=1, cols=i)
+    for yi in range(i):
+        for xx in X_train[y_pred == yi]:
+            fig.add_trace(go.Scatter(x=np.arange(X_train.shape[1]), y=xx.ravel(),
+                                     line_color='grey'),
+                          row=1, col=yi+1)
+        fig.add_trace(go.Scatter(x=np.arange(X_train.shape[1]),
+                                 y=km.cluster_centers_[yi].ravel(),
+                                 line_color='darkred'),
+                      row=1, col=yi+1)
+    fig.show()
+    for yi in range(3):
+        plt.subplot(3,3,yi+4)
+        for xx in X_train[y_pred == yi]:
+            plt.plot(dba_km.cluster_centers_[yi].ravel(), 'r-')
+        if yi == 1:
+            plt.title('DBA $k$-means')
 
+    for yi in range(3):
+        plt.subplots(3,3,7+yi)
+        for xx in X_train[y_pred == yi]:
+            plt.plot(sdtw_km.cluster_centers_[yi].ravel(), 'r-')
+        if yi == 1:
+            plt.title('Soft-DTW $k$-means')
+    fig.update_layout(title_text='DTW k-means')
 
-    #  fig = make_subplots(rows=1, cols=i)
-    #  for yi in range(i):
-        #  for xx in X_train[y_pred == yi]:
-            #  fig.add_trace(go.Scatter(x=np.arange(X_train.shape[1]), y=xx.ravel(),
-                                     #  line_color='grey'),
-                          #  row=1, col=yi+1)
-        #  fig.add_trace(go.Scatter(x=np.arange(X_train.shape[1]),
-                                 #  y=km.cluster_centers_[yi].ravel(),
-                                 #  line_color='darkred'),
-                      #  row=1, col=yi+1)
-    #  fig.show()
-#  for yi in range(3):
-#
-#      plt.subplot(3,3,yi+4)
-#      for xx in X_train[y_pred == yi]:
-#          plt.plot(dba_km.cluster_centers_[yi].ravel(), 'r-')
-#      if yi == 1:
-#          plt.title('DBA $k$-means')
-#
-#  for yi in range(3):
-#      plt.subplots(3,3,7+yi)
-#      for xx in X_train[y_pred == yi]:
-#          plt.plot(sdtw_km.cluster_centers_[yi].ravel(), 'r-')
-#      if yi == 1:
-#          plt.title('Soft-DTW $k$-means')
-#  fig.update_layout(title_text='DTW k-means')
-#  fig.show()
-
-#  input_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/InputFiles/')
-#  water_use = pd.read_pickle(input_path + 'hourly_use_SFR_y1.pkl')
-#  months = groupby_season(water_use)[0]
-# print(months.columns)
 def compare_radius_means(n_clusters, radii=['r1', 'r2', 'r3', 'r4', 'r5']):
     """ 
     produces plots to compare the means of clusters using the DTW algorithm with
-    different radii of wrapping
+    different radii of wrapping window
     n_clusters (int): the number of clusters used in the DTW algorithm
     radii (list): list of """
-    df = ut.analyse_dtw(n_clusters)
+
+    df = analyse_dtw(n_clusters)
+    df_use = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl') 
+    df_use = clean_outliers(df_use)
+    df_use = groupby_year(df_use)
     radii = radii
     clusters = list(range(n_clusters))
+    n_radii = (len(radii))
+    fontsize = 14
 
-    for r in radii:
-        radius = df[r]
-        fig, axs = plt.subplots(
-            1, n_clusters, 
+    fig, axs = plt.subplots(
+            n_radii, n_clusters, 
             figsize=(24, 6), 
             sharex=True,
             sharey=True,
             layout='constrained')
+
+    for ri, r in enumerate(radii):
+        radius = df[r]
         for ci, c in enumerate(clusters):
             cluster = [str(x) for x in radius[radius == c].index.to_list()]
-            df_use_rc =  df_use_y.filter(items=cluster)
+            df_use_rc =  df_use.filter(items=cluster)
             total = df_use_rc.sum(axis=1)
             average = df_use_rc.mean(axis=1)
 
             #  for i in df_use_rc.columns:
                 #  i = str(i)
                 #  ax.plot(df_use_rc.index, df_use_rc[i], c='grey')
-            axs[ci].plot(df_use_rc.index, average, c='crimson')
-            #  ax[ci].set_title(f'Average Use for Cluster {c}, radius {r}', fontsize=14)
-            #  axs[ci].set_xlabel('Time (hr)', fontsize=fontsize)
-            #  axs[ci].set_ylabel('Volume (gallons)', fontsize=fontsize)
-        fig.supxlabel('Time (hr)', fontsize=fontsize)
-        fig.supylabel('Volume (gallons)', fontsize=fontsize)
-        fig.suptitle(f'{n_clusters} Cluster Averages, {r}', fontsize=tfontsize)
-        #  plt.show()
+            axs[ri, ci].plot(df_use_rc.index, average, c='crimson')
+            if ri == 0:
+                axs[ri, ci].set_title(f'Cluster {ci}', fontsize=fontsize)
+            if ci == 0:
+                axs[ri, ci].set_ylabel(f'Radius {ri+1}', fontsize=fontsize)
+    fig.supxlabel('Time (hr)', fontsize=fontsize)
+    fig.supylabel('Volume (gallons)', fontsize=fontsize)
+    #  fig.suptitle(f'{n_clusters} Cluster Averages', fontsize=tfontsize)
+    plt.show()
+compare_radius_means(n_clusters=5)
 
 
 def prepare_regression():
-    year1 = '../InputFiles/y1_SFR_hourly.pkl'
+    year1 = './InputFiles/y1_SFR_hourly.pkl'
     use_y1 = pd.read_pickle(year1)
     df_y1 = pd.DataFrame(use_y1)
     df_y1 = clean_outliers(df_y1)
 
-    year2 = '../InputFiles/y2_SFR_hourly.pkl'
+    year2 = './InputFiles/y2_SFR_hourly.pkl'
     use_y2 = pd.read_pickle(year2)
     df_y2 = pd.DataFrame(use_y2)
     df_y2 = clean_outliers(df_y2)
 
-    bill = pd.read_pickle('../InputFiles/bill_all.pkl')
+    bill = pd.read_pickle('./InputFiles/bill_all.pkl')
     df_bill = pd.DataFrame(bill)
     df_bill.index = df_bill.index.map(str)
     
@@ -478,7 +476,7 @@ def prepare_regression():
         all_list[i] = pd.concat([d, df_bill.iloc[:,i].apply(np.log)], axis=1)
         all_list[i]['period'] = str(i+1)
         all_list[i].columns = ['logQ', 'logP', 'period']
-#
+
     q_all = pd.concat(all_list, axis=0, join='inner')
     q_all = q_all.reset_index(names='user')
     q_all.to_pickle('reg_data.pkl')
