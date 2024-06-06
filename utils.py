@@ -441,7 +441,7 @@ def compare_radius_means(n_clusters, radii=['r1', 'r2', 'r3', 'r4', 'r5']):
     plt.show()
 
 
-def prepare_regression(sample=True, **kwargs):
+def prepare_regression(sample=False, **kwargs):
 
     year1 = '../InputFiles/y1_SFR_hourly.pkl'
     use_y1 = pd.read_pickle(year1)
@@ -457,8 +457,7 @@ def prepare_regression(sample=True, **kwargs):
     df_bill.index = df_bill.index.map(str)
 
     #  summer_wd = weekdays.loc[weekdays.index.month.isin(summer)].copy()
-    p1y1 = df_y1.loc[df_y1.index.month.isin([7,
-                                             8])].sum().apply(np.log).round(3)
+    p1y1 = df_y1.loc[df_y1.index.month.isin([7, 8])].sum().apply(np.log).round(3)
     p2y1 = df_y1.loc[df_y1.index.month.isin([9, 10])].sum().apply(np.log).round(3)
     p3y1 = df_y1.loc[df_y1.index.month.isin([11, 12])].sum().apply(np.log).round(3)
     p4y1 = df_y1.loc[df_y1.index.month.isin([1, 2])].sum().apply(np.log).round(3)
@@ -475,13 +474,16 @@ def prepare_regression(sample=True, **kwargs):
     all_list = [p1y1, p2y1, p3y1, p4y1, p5y1, p6y1, p1y2, p2y2, p3y2, p4y2, p5y2, p6y2]
 
     for i, d in enumerate(all_list):
-        all_list[i] = pd.concat([d, df_bill.iloc[:,i].apply(np.log)], axis=1,
+        all_list[i] = pd.concat([d, 
+                                df_bill.iloc[:,i].apply(np.log)], 
+                                axis=1,
                                 join='inner')
-        all_list[i]['period'] = str(i % 6)
+        all_list[i]['period'] = str((i % 6) + 1)
         all_list[i].columns = ['logQ', 'logP', 'period']
-    #
+    
     q_all = pd.concat(all_list, axis=0, join='inner')
     q_all = q_all.reset_index(names='user')
+    q_all.replace([np.inf, -np.inf], np.nan, inplace=True)
     q_all.dropna(axis=0, how='any', inplace=True, ignore_index=True)
     if sample:
         if not kwargs:
@@ -492,7 +494,8 @@ def prepare_regression(sample=True, **kwargs):
         q_all = q_all.loc[q_all['user'].isin(x)]
         q_all.to_pickle(f'reg_data_{n_sample}.pkl')
     else:
-        q_all.to_pickle('reg_data_test.pkl')
+        q_all.to_pickle('reg_data.pkl')
+
 
 def add_dummies(file='reg_data.pkl'):
     file = file
@@ -506,8 +509,31 @@ def add_dummies(file='reg_data.pkl'):
         dtype=float
     )
     data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
+
+
+add_dummies()
+
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
     users = [int(x) for x in users]
     print(np.min(users))
+
+
+def load_reg_data(sample=False, **kwargs):
+    if sample:
+        if not kwargs:
+            n_sample = 300
+        else:
+            n_sample = kwargs['n_sample']
+        data_file = f'reg_data_{n_sample}_with_dummies.pkl'
+        if os.path.exists(data_file):
+            data_file = data_file
+        else:
+            ut.prepare_regression(sample=True, n_sample=n_sample)
+            ut.add_dummies('reg_data_' + str(n_sample) + '.pkl')
+            data_file = data_file
+    else:
+        data_file = 'reg_data_with_dummies.pkl'
+
+    return data_file
 
