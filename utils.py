@@ -440,6 +440,52 @@ def compare_radius_means(n_clusters, radii=['r1', 'r2', 'r3', 'r4', 'r5']):
     plt.show()
 
 
+def calc_average_price():
+    year1 = '../InputFiles/y1_SFR_hourly.pkl'
+    use_y1 = pd.read_pickle(year1)
+    df_y1 = pd.DataFrame(use_y1)
+    df_y1 = clean_outliers(df_y1)
+    year2 = '../InputFiles/y2_SFR_hourly.pkl'
+    use_y2 = pd.read_pickle(year2)
+    df_y2 = pd.DataFrame(use_y2)
+    df_y2 = clean_outliers(df_y2)
+
+    bill = pd.read_pickle('../InputFiles/bill_all.pkl')
+    df_bill = pd.DataFrame(bill)
+    df_bill.index = df_bill.index.map(str)
+
+    #  summer_wd = weekdays.loc[weekdays.index.month.isin(summer)].copy()
+    p1y1 = df_y1.loc[df_y1.index.month.isin([7, 8])].sum().round(3)
+    p2y1 = df_y1.loc[df_y1.index.month.isin([9, 10])].sum().round(3)
+    p3y1 = df_y1.loc[df_y1.index.month.isin([11, 12])].sum().round(3)
+    p4y1 = df_y1.loc[df_y1.index.month.isin([1, 2])].sum().round(3)
+    p5y1 = df_y1.loc[df_y1.index.month.isin([3, 4])].sum().round(3)
+    p6y1 = df_y1.loc[df_y1.index.month.isin([5, 6])].sum().round(3)
+
+    p1y2 = df_y2.loc[df_y2.index.month.isin([7, 8])].sum().round(3)
+    p2y2 = df_y2.loc[df_y2.index.month.isin([9, 10])].sum().round(3)
+    p3y2 = df_y2.loc[df_y2.index.month.isin([11, 12])].sum().round(3)
+    p4y2 = df_y2.loc[df_y2.index.month.isin([1, 2])].sum().round(3)
+    p5y2 = df_y2.loc[df_y2.index.month.isin([3, 4])].sum().round(3)
+    p6y2 = df_y2.loc[df_y2.index.month.isin([5, 6])].sum().round(3)
+
+    all_list = [p1y1, p2y1, p3y1, p4y1, p5y1, p6y1, p1y2, p2y2, p3y2, p4y2, p5y2, p6y2]
+
+    for i, d in enumerate(all_list):
+        all_list[i] = pd.concat([d, 
+                                df_bill.iloc[:,i]],
+                                 axis=1,
+                                join='inner')
+        all_list[i].columns = ['Q', 'P']
+        all_list[i]['P_ave'] = all_list[i]['P'] / all_list[i]['Q']
+    
+    q_all = pd.concat(all_list, axis=0, join='inner')
+    q_all = q_all.reset_index(names='user')
+    q_all.replace([np.inf, -np.inf], np.nan, inplace=True)
+    q_all.dropna(axis=0, how='any', inplace=True, ignore_index=True)
+    print(q_all.head())
+    q_all.to_pickle('average_price_data.pkl')
+calc_average_price()
 def prepare_regression(sample=False, **kwargs):
 
     year1 = '../InputFiles/y1_SFR_hourly.pkl'
@@ -510,9 +556,6 @@ def add_dummies(file='reg_data.pkl'):
     data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
 
 
-add_dummies()
-
-
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
     users = [int(x) for x in users]
@@ -536,4 +579,5 @@ def load_reg_data(sample=False, **kwargs):
         data_file = 'reg_data_with_dummies.pkl'
 
     return data_file
+
 
