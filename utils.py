@@ -1,4 +1,3 @@
-
 import glob
 import numpy as np
 rng = np.random.default_rng(1234)
@@ -490,7 +489,7 @@ def prepare_regression(sample=False, **kwargs):
             n_sample = 300
         else:
             n_sample = kwargs['n_sample']
-        x = rng.choice(pd.unique(q_all['user']), n_sample, replace=False, )
+        x = rng.choice(pd.unique(q_all['user']), n_sample, replace=False)
         q_all = q_all.loc[q_all['user'].isin(x)]
         q_all.to_pickle(f'reg_data_{n_sample}.pkl')
     else:
@@ -503,7 +502,7 @@ def add_dummies(file='reg_data.pkl'):
         file
     )
     data = pd.get_dummies(
-        data = data,
+        data=data,
         columns=["user", "period"],
         drop_first=True,
         dtype=float
@@ -512,6 +511,7 @@ def add_dummies(file='reg_data.pkl'):
 
 
 add_dummies()
+
 
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')

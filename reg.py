@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-import utils as ut 
-import os
-
+import utils as ut
 
 data_file = ut.load_reg_data()
 data = pd.read_pickle(data_file)
@@ -18,4 +16,3 @@ model = sm.OLS(y, X)
 results = model.fit()
 results.summary().as_csv()
 print(results.summary())
-
