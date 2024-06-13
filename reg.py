@@ -5,14 +5,15 @@ import utils as ut
 
 data_file = ut.load_reg_data()
 data = pd.read_pickle(data_file)
+print(data.head())
 #  data.dropna(axis=0, how='any', inplace=True, ignore_index=True)
 
-y = np.asarray(data['logQ'])
-X = np.asarray(data.loc[:, data.columns != 'logQ'])
+#  y = np.asarray(data['logQ'])
+#  X = np.asarray(data.loc[:, data.columns != 'logQ'])
 #
 #  X = np.asarray(data['logP'])
-X = sm.add_constant(X, prepend=False)
-model = sm.OLS(y, X)
-results = model.fit()
-results.summary().as_csv()
-print(results.summary())
+#  X = sm.add_constant(X, prepend=False)
+#  model = sm.OLS(y, X)
+#  results = model.fit()
+#  results.summary().as_csv()
+#  print(results.summary())

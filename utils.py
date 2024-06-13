@@ -483,16 +483,20 @@ def calc_average_price():
     q_all = q_all.reset_index(names='user')
     q_all.replace([np.inf, -np.inf], np.nan, inplace=True)
     q_all.dropna(axis=0, how='any', inplace=True, ignore_index=True)
-    print(q_all.head())
     q_all.to_pickle('average_price_data.pkl')
+
+
 def weather_data():
-    file = '3082341.csv'
-    data = pd.read_csv(
-        file, 
+    file1 = '3082341.csv'
+    file2 = 'monthly.csv'
+
+    data1 = pd.read_csv(
+        file1, 
         usecols=[
             'DATE',
             'REPORT_TYPE',
-            'HourlyRelativeHumidity',
+            'DailyAverageRelativeHumidity',
+            'DailyPrecipitation',
             'MonthlyDaysWithGT001Precip',
             'MonthlyDaysWithGT90Temp',
             'MonthlyMeanTemperature',
@@ -502,32 +506,73 @@ def weather_data():
             'MonthlyGreatestPrecip'
         ],
         index_col='DATE',
-        parse_dates=True
+        parse_dates=True,
+        na_values=['T'],
+        #  na_values={'DailyPrecipitation': 'T'},
+        #  low_memory=False
+        dtype={
+            'REPORT_TYPE': str,
+            'DailyAverageRelativeHumidity': np.float64,
+            'MonthlyDaysWithGT001Precip': np.float64,
+            'MonthlyDaysWithGT90Temp': np.float64,
+            'MonthlyMeanTemperature': np.float64,
+            'MonthlyMinimumTemperature': np.float64,
+            'MonthlyTotalLiquidPrecipitation': np.float64,
+            'NormalsCoolingDegreeDay': np.float64,
+            'MonthlyGreatestPrecip': np.float64
+        }
     )
-    df = pd.DataFrame(data)
-    #  rhave = df['HourlyRelativeHumidity']
-    #  rel_hum = rhave.groupby(rhave.index.month).mean()
-    #  print(rel_hum)
-    rhave = df.resample('ME')['HourlyRelativeHumidity'].mean()
-    print(rhave.index)
-    df.index = pd.to_datetime(df.index.date)
-    print(df.index)
+
+    data2 = pd.read_csv(
+        file2,
+        usecols=[
+        'Month Year',
+        'Total ETo (in)'],
+        index_col='Month Year',
+        parse_dates=True,
+        date_format='%b %Y'
+    )
+    df = pd.DataFrame(data1)
+    df.index = df.index.to_period('M').to_timestamp() 
+    #  df.index.replace(day=1)
+    ET = pd.DataFrame(data2)
+    ET = ET.resample('MS').mean()
+    rhave = df.resample('MS')['DailyAverageRelativeHumidity'].mean().round(2)
+    pp = df.resample('MS')['DailyPrecipitation'].mean().round(2)
     df = df[df['REPORT_TYPE'] == 'SOM  ']
-    df = df.drop(labels=['REPORT_TYPE','HourlyRelativeHumidity'], axis=1)
+    df = df.drop(labels=[
+        'REPORT_TYPE',
+        'DailyAverageRelativeHumidity',
+        'DailyPrecipitation'],
+     axis=1)
     df['rhave'] = rhave
+    df['pp'] = pp
+    df['ET'] = ET
     df.dropna(axis=0, how='all', inplace=True)
     df.rename(columns={
-        'MonthlyDaysWithGT90Temp': 'gt90',
-        'MonthlyDaysWithGT001Precip': 'ppdays',
-        'MonthlyGreatestPrecip': 'pmax',
-        'MonthlyMeanTemperature': 'tave',
-        'MonthlyMinimumTemperature': 'tmin',
-        'MonthlyTotalLiquidPrecipitation': 'totalpp',
-        'NormalsCoolingDegreeDay': 'cdd'
-    })
-    #  df = pd.concat([df, rhave], axis=1, join='inner')
-    print(df.head())
-weather_data()
+            'MonthlyDaysWithGT90Temp': 'gt90',
+            'MonthlyDaysWithGT001Precip': 'ppdays',
+            'MonthlyGreatestPrecip': 'pmax',
+            'MonthlyMeanTemperature': 'tave',
+            'MonthlyMinimumTemperature': 'tmin',
+            'MonthlyTotalLiquidPrecipitation': 'totalpp',
+            'NormalsCoolingDegreeDay': 'cdd'
+            },
+        inplace=True)
+    df = df.resample('2MS', origin='start').agg({
+            'ppdays': 'sum',
+            'gt90': 'sum',
+            'pmax': 'max',
+            'tave': 'mean',
+            'tmin': 'min',
+            'totalpp': 'sum',
+            'cdd': 'sum',
+            'rhave': 'mean',
+            'pp': 'mean',
+            'ET': 'mean'
+            })
+    df.to_pickle('weather_data.pkl')
+
 def prepare_regression(sample=False, **kwargs):
 
     year1 = '../InputFiles/y1_SFR_hourly.pkl'
@@ -544,34 +589,50 @@ def prepare_regression(sample=False, **kwargs):
     df_bill.index = df_bill.index.map(str)
 
     #  summer_wd = weekdays.loc[weekdays.index.month.isin(summer)].copy()
-    p1y1 = df_y1.loc[df_y1.index.month.isin([7, 8])].sum().apply(np.log).round(3)
-    p2y1 = df_y1.loc[df_y1.index.month.isin([9, 10])].sum().apply(np.log).round(3)
-    p3y1 = df_y1.loc[df_y1.index.month.isin([11, 12])].sum().apply(np.log).round(3)
-    p4y1 = df_y1.loc[df_y1.index.month.isin([1, 2])].sum().apply(np.log).round(3)
-    p5y1 = df_y1.loc[df_y1.index.month.isin([3, 4])].sum().apply(np.log).round(3)
-    p6y1 = df_y1.loc[df_y1.index.month.isin([5, 6])].sum().apply(np.log).round(3)
+    p1y1 = df_y1.loc[df_y1.index.month.isin([7, 8])].sum().round(3)
+    p2y1 = df_y1.loc[df_y1.index.month.isin([9, 10])].sum().round(3)
+    p3y1 = df_y1.loc[df_y1.index.month.isin([11, 12])].sum().round(3)
+    p4y1 = df_y1.loc[df_y1.index.month.isin([1, 2])].sum().round(3)
+    p5y1 = df_y1.loc[df_y1.index.month.isin([3, 4])].sum().round(3)
+    p6y1 = df_y1.loc[df_y1.index.month.isin([5, 6])].sum().round(3)
 
-    p1y2 = df_y2.loc[df_y2.index.month.isin([7, 8])].sum().apply(np.log).round(3)
-    p2y2 = df_y2.loc[df_y2.index.month.isin([9, 10])].sum().apply(np.log).round(3)
-    p3y2 = df_y2.loc[df_y2.index.month.isin([11, 12])].sum().apply(np.log).round(3)
-    p4y2 = df_y2.loc[df_y2.index.month.isin([1, 2])].sum().apply(np.log).round(3)
-    p5y2 = df_y2.loc[df_y2.index.month.isin([3, 4])].sum().apply(np.log).round(3)
-    p6y2 = df_y2.loc[df_y2.index.month.isin([5, 6])].sum().apply(np.log).round(3)
+    p1y2 = df_y2.loc[df_y2.index.month.isin([7, 8])].sum().round(3)
+    p2y2 = df_y2.loc[df_y2.index.month.isin([9, 10])].sum().round(3)
+    p3y2 = df_y2.loc[df_y2.index.month.isin([11, 12])].sum().round(3)
+    p4y2 = df_y2.loc[df_y2.index.month.isin([1, 2])].sum().round(3)
+    p5y2 = df_y2.loc[df_y2.index.month.isin([3, 4])].sum().round(3)
+    p6y2 = df_y2.loc[df_y2.index.month.isin([5, 6])].sum().round(3)
 
     all_list = [p1y1, p2y1, p3y1, p4y1, p5y1, p6y1, p1y2, p2y2, p3y2, p4y2, p5y2, p6y2]
 
-    for i, d in enumerate(all_list):
-        all_list[i] = pd.concat([d, 
-                                df_bill.iloc[:,i].apply(np.log)], 
-                                axis=1,
-                                join='inner')
-        all_list[i]['period'] = str((i % 6) + 1)
-        all_list[i].columns = ['logQ', 'logP', 'period']
-    
+    if kwargs:
+        if kwargs['price'] == 'total':
+            for i, d in enumerate(all_list):
+                all_list[i] = pd.concat([d.apply(np.log).round(3),
+                                        df_bill.iloc[:,i].apply(np.log).round(3)],
+                                        axis=1,
+                                        join='inner')
+                all_list[i]['period'] = str((i % 6) + 1)
+                all_list[i].columns = ['logQ', 'logP', 'period']
+        elif kwargs['price'] == 'lagged average':
+            for i, d in enumerate(all_list):
+                if i > 0:
+                    all_list[i] = pd.concat([d,
+                                            df_bill.iloc[:,i]],
+                                             axis=1,
+                                            join='inner')
+                    all_list[i].columns = ['Q', 'P']
+                    all_list[i]['period'] = str((i % 6) + 1)
+                    all_list[i]['P_ave'] = np.log(all_list[i]['P'] /
+                                                  all_list[i]['Q'])
+                    all_list[i]['Q'].apply(np.log).round(3)
+                    print(all_list[i].head())
+
     q_all = pd.concat(all_list, axis=0, join='inner')
     q_all = q_all.reset_index(names='user')
-    q_all.replace([np.inf, -np.inf], np.nan, inplace=True)
+    q_all.replace([np.inf, -np.inf, 'T'], np.nan, inplace=True)
     q_all.dropna(axis=0, how='any', inplace=True, ignore_index=True)
+    print(q_all.head())
     if sample:
         if not kwargs:
             n_sample = 300
@@ -579,11 +640,10 @@ def prepare_regression(sample=False, **kwargs):
             n_sample = kwargs['n_sample']
         x = rng.choice(pd.unique(q_all['user']), n_sample, replace=False)
         q_all = q_all.loc[q_all['user'].isin(x)]
-        q_all.to_pickle(f'reg_data_{n_sample}.pkl')
-    else:
-        q_all.to_pickle('reg_data.pkl')
-
-
+        #  q_all.to_pickle(f'reg_data_{n_sample}.pkl')
+    #  else:
+        #  q_all.to_pickle('reg_data.pkl')
+prepare_regression(price='lagged average')
 def add_dummies(file='reg_data.pkl'):
     file = file
     data = pd.read_pickle(
