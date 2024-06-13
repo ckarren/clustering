@@ -573,6 +573,7 @@ def weather_data():
             })
     df.to_pickle('weather_data.pkl')
 
+
 def prepare_regression(sample=False, **kwargs):
 
     year1 = '../InputFiles/y1_SFR_hourly.pkl'
@@ -588,6 +589,9 @@ def prepare_regression(sample=False, **kwargs):
     df_bill = pd.DataFrame(bill)
     df_bill.index = df_bill.index.map(str)
 
+    weather = pd.read_pickle('weather_data.pkl')
+    df_weather = pd.DataFrame(weather)
+
     #  summer_wd = weekdays.loc[weekdays.index.month.isin(summer)].copy()
     p1y1 = df_y1.loc[df_y1.index.month.isin([7, 8])].sum().round(3)
     p2y1 = df_y1.loc[df_y1.index.month.isin([9, 10])].sum().round(3)
@@ -602,7 +606,7 @@ def prepare_regression(sample=False, **kwargs):
     p4y2 = df_y2.loc[df_y2.index.month.isin([1, 2])].sum().round(3)
     p5y2 = df_y2.loc[df_y2.index.month.isin([3, 4])].sum().round(3)
     p6y2 = df_y2.loc[df_y2.index.month.isin([5, 6])].sum().round(3)
-
+#
     all_list = [p1y1, p2y1, p3y1, p4y1, p5y1, p6y1, p1y2, p2y2, p3y2, p4y2, p5y2, p6y2]
 
     if kwargs:
@@ -618,21 +622,20 @@ def prepare_regression(sample=False, **kwargs):
             for i, d in enumerate(all_list):
                 if i > 0:
                     all_list[i] = pd.concat([d,
-                                            df_bill.iloc[:,i]],
+                                            df_bill.iloc[:,i-1]],
                                              axis=1,
                                             join='inner')
                     all_list[i].columns = ['Q', 'P']
                     all_list[i]['period'] = str((i % 6) + 1)
                     all_list[i]['P_ave'] = np.log(all_list[i]['P'] /
-                                                  all_list[i]['Q'])
-                    all_list[i]['Q'].apply(np.log).round(3)
-                    print(all_list[i].head())
+                                                  all_list[i]['Q']).round(3)
+                    all_list[i]['Q'] = all_list[i]['Q'].apply(np.log).round(3)
+                    all_list[i] = all_list[i].assign(**df_weather.iloc[i,:])
 
-    q_all = pd.concat(all_list, axis=0, join='inner')
+    q_all = pd.concat(all_list[1:-1], axis=0, join='inner')
     q_all = q_all.reset_index(names='user')
     q_all.replace([np.inf, -np.inf, 'T'], np.nan, inplace=True)
     q_all.dropna(axis=0, how='any', inplace=True, ignore_index=True)
-    print(q_all.head())
     if sample:
         if not kwargs:
             n_sample = 300
@@ -640,10 +643,11 @@ def prepare_regression(sample=False, **kwargs):
             n_sample = kwargs['n_sample']
         x = rng.choice(pd.unique(q_all['user']), n_sample, replace=False)
         q_all = q_all.loc[q_all['user'].isin(x)]
-        #  q_all.to_pickle(f'reg_data_{n_sample}.pkl')
-    #  else:
-        #  q_all.to_pickle('reg_data.pkl')
-prepare_regression(price='lagged average')
+        q_all.to_pickle(f'reg_data_{n_sample}.pkl')
+    else:
+        q_all.to_pickle('lagged_average_price_reg_data.pkl')
+
+
 def add_dummies(file='reg_data.pkl'):
     file = file
     data = pd.read_pickle(
@@ -653,10 +657,11 @@ def add_dummies(file='reg_data.pkl'):
         data=data,
         columns=["user", "period"],
         drop_first=True,
-        dtype=float
+        dtype=int
     )
     data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
 
+add_dummies(file='lagged_average_price_reg_data.pkl')
 
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
