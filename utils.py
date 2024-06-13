@@ -485,7 +485,49 @@ def calc_average_price():
     q_all.dropna(axis=0, how='any', inplace=True, ignore_index=True)
     print(q_all.head())
     q_all.to_pickle('average_price_data.pkl')
-calc_average_price()
+def weather_data():
+    file = '3082341.csv'
+    data = pd.read_csv(
+        file, 
+        usecols=[
+            'DATE',
+            'REPORT_TYPE',
+            'HourlyRelativeHumidity',
+            'MonthlyDaysWithGT001Precip',
+            'MonthlyDaysWithGT90Temp',
+            'MonthlyMeanTemperature',
+            'MonthlyMinimumTemperature',
+            'MonthlyTotalLiquidPrecipitation',
+            'NormalsCoolingDegreeDay',
+            'MonthlyGreatestPrecip'
+        ],
+        index_col='DATE',
+        parse_dates=True
+    )
+    df = pd.DataFrame(data)
+    #  rhave = df['HourlyRelativeHumidity']
+    #  rel_hum = rhave.groupby(rhave.index.month).mean()
+    #  print(rel_hum)
+    rhave = df.resample('ME')['HourlyRelativeHumidity'].mean()
+    print(rhave.index)
+    df.index = pd.to_datetime(df.index.date)
+    print(df.index)
+    df = df[df['REPORT_TYPE'] == 'SOM  ']
+    df = df.drop(labels=['REPORT_TYPE','HourlyRelativeHumidity'], axis=1)
+    df['rhave'] = rhave
+    df.dropna(axis=0, how='all', inplace=True)
+    df.rename(columns={
+        'MonthlyDaysWithGT90Temp': 'gt90',
+        'MonthlyDaysWithGT001Precip': 'ppdays',
+        'MonthlyGreatestPrecip': 'pmax',
+        'MonthlyMeanTemperature': 'tave',
+        'MonthlyMinimumTemperature': 'tmin',
+        'MonthlyTotalLiquidPrecipitation': 'totalpp',
+        'NormalsCoolingDegreeDay': 'cdd'
+    })
+    #  df = pd.concat([df, rhave], axis=1, join='inner')
+    print(df.head())
+weather_data()
 def prepare_regression(sample=False, **kwargs):
 
     year1 = '../InputFiles/y1_SFR_hourly.pkl'
