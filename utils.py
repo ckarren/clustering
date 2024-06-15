@@ -678,14 +678,20 @@ def add_dummies(file='reg_data.pkl'):
     clusters_file = '../RadiusComps/4_DTW_results_scaled_r2.csv'
     clusters = pd.read_csv(
         clusters_file, 
-        usecols=)
-    data = pd.get_dummies(
-        data=data,
-        columns=["user", "period"],
-        drop_first=True,
-        dtype=int
-    )
-    data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
+        usecols=[
+            'User',
+            'DBA cluster'],
+        index_col='User')
+    df_clusters = pd.DataFrame(clusters)
+    data.join(df_clusters, how='inner')
+    print(data.head())
+    #  data = pd.get_dummies(
+        #  data=data,
+        #  columns=["user", "period"],
+        #  drop_first=True,
+        #  dtype=int
+    #  )
+    #  data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
 
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
