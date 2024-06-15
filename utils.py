@@ -669,6 +669,7 @@ def prepare_regression(sample=False, **kwargs):
         q_all.to_pickle('LAP_inst_reg_data.pkl')
 
 prepare_regression()
+
 def add_dummies(file='reg_data.pkl'):
     file = file
     data = pd.read_pickle(
