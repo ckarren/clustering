@@ -648,6 +648,8 @@ def prepare_regression(sample=False, **kwargs):
         q_all.to_pickle('lagged_average_price_reg_data.pkl')
 
 
+def add_clusters():
+    
 def add_dummies(file='reg_data.pkl'):
     file = file
     data = pd.read_pickle(
@@ -660,8 +662,6 @@ def add_dummies(file='reg_data.pkl'):
         dtype=int
     )
     data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
-
-add_dummies(file='lagged_average_price_reg_data.pkl')
 
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
