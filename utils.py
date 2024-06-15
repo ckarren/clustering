@@ -490,14 +490,14 @@ def instruments():
    period_index = pd.period_range(start='2018-05-01', end='2020-06-01', freq='2M')
    datetime_index = period_index.to_timestamp()
    FC = ([17.69] * 6) + ([18.40] * 6)
-   block1 = ([0.0] * 6) + ([2.89] * 6)
+   #  block1 = ([0.0] * 6) + ([2.89] * 6)
    blockdiff1 = ([0.0] * 6) + ([2.89] * 6)
    blockdiff2 = ([3.5] * 6) + ([0.61] * 6)
    DOS = datetime_index.to_series().diff()[1:].astype('int64') / (864 * 10**11)
 
    data = {
        'FC': FC,
-       'block1': block1,
+       #  'block1': block1,
        'blockdiff1': blockdiff1,
        'blockdiff2': blockdiff2,
        'DOS': DOS
@@ -608,10 +608,19 @@ def prepare_regression(sample=False, **kwargs):
     df_bill = pd.DataFrame(bill)
     df_bill.index = df_bill.index.map(str)
 
+    clusters = pd.read_csv(
+        '../RadiusComps/4_DTW_results_scaled_r2.csv',
+        usecols=[
+            'User',
+            'DBA cluster'],
+        index_col='User')
+    df_clusters = pd.DataFrame(clusters)
+    df_clusters.index = df_clusters.index.map(str)
+
     weather = pd.read_pickle('weather_data.pkl')
     df_weather = pd.DataFrame(weather)
 
-    instruments = instruments()
+    inst = instruments()
     #  summer_wd = weekdays.loc[weekdays.index.month.isin(summer)].copy()
     p1y1 = df_y1.loc[df_y1.index.month.isin([7, 8])].sum().round(3)
     p2y1 = df_y1.loc[df_y1.index.month.isin([9, 10])].sum().round(3)
@@ -633,30 +642,32 @@ def prepare_regression(sample=False, **kwargs):
         if kwargs['price'] == 'total':
             for i, d in enumerate(all_list):
                 all_list[i] = pd.concat([d.apply(np.log).round(3),
-                                        df_bill.iloc[:,i].apply(np.log).round(3)],
+                                        df_bill.iloc[:,i].apply(np.log).round(3),
+                                         df_clusters],
                                         axis=1,
                                         join='inner')
                 all_list[i]['period'] = str((i % 6) + 1)
-                all_list[i].columns = ['logQ', 'logP', 'period']
+                all_list[i].columns = ['logQ', 'logP', 'cluster', 'period']
         elif kwargs['price'] == 'lagged average':
             for i, d in enumerate(all_list):
                 if i > 0:
                     all_list[i] = pd.concat([d,
-                                            df_bill.iloc[:,i-1]],
+                                            df_bill.iloc[:,i-1],
+                                             df_clusters],
                                              axis=1,
                                             join='inner')
-                    all_list[i].columns = ['Q', 'P']
+                    all_list[i].columns = ['Q', 'P', 'cluster']
                     all_list[i]['period'] = str((i % 6) + 1)
                     all_list[i]['P_ave'] = np.log(all_list[i]['P'] /
                                                   all_list[i]['Q']).round(3)
                     all_list[i]['Q'] = all_list[i]['Q'].apply(np.log).round(3)
                     all_list[i] = all_list[i].assign(**df_weather.iloc[i,:])
-                    all_list[i] = all_list[i].assign(**instruments.iloc[i-1,:])
+                    all_list[i] = all_list[i].assign(**inst.iloc[i-1,:])
 
-    q_all = pd.concat(all_list[1:-1], axis=0, join='inner')
+    q_all = pd.concat(all_list[1:], axis=0, join='inner')
     q_all = q_all.reset_index(names='user')
     q_all.replace([np.inf, -np.inf, 'T'], np.nan, inplace=True)
-    q_all.dropna(axis=0, how='any', inplace=True, ignore_index=True)
+    q_all.dropna(axis=0, how='any', inplace=True, ignore_index=False)
     if sample:
         if not kwargs:
             n_sample = 300
@@ -668,32 +679,19 @@ def prepare_regression(sample=False, **kwargs):
     else:
         q_all.to_pickle('LAP_inst_reg_data.pkl')
 
-    
-prepare_regression()
 
 def add_dummies(file='reg_data.pkl'):
     file = file
     data = pd.read_pickle(
         file
     )
-    clusters_file = '../RadiusComps/4_DTW_results_scaled_r2.csv'
-    clusters = pd.read_csv(
-        clusters_file, 
-        usecols=[
-            'User',
-            'DBA cluster'],
-        index_col='User')
-    df_clusters = pd.DataFrame(clusters)
-    data.join(df_clusters, how='inner')
-    print(data.head())
-    #  data = pd.get_dummies(
-        #  data=data,
-        #  columns=["user", "period"],
-        #  drop_first=True,
-        #  dtype=int
-    #  )
-    #  data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
-
+    data = pd.get_dummies(
+        data=data,
+        columns=["user", "period", "cluster"],
+        drop_first=True,
+        dtype=int
+    )
+    data.to_pickle(f'B:/{file[:-4]}_with_dummies.pkl')
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
     users = [int(x) for x in users]
@@ -714,8 +712,7 @@ def load_reg_data(sample=False, **kwargs):
             add_dummies('reg_data_' + str(n_sample) + '.pkl')
             data_file = data_file
     else:
-        data_file = 'lagged_average_price_reg_data_with_dummies.pkl'
-
-    return data_file
+        data_file = 'B:/LAP_inst_reg_data_with_dummies.pkl'
+        return data_file
 
 
