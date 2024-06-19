@@ -16,7 +16,7 @@ n_cluster = 4
 n_init = 5
 max_iter_barycenter=20
 cluster_windows = [2,3]
-file_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/InputFiles/')
+file_path = ('../InputFiles/')
 use_file = file_path + 'y1_SFR_hourly.pkl'
 
 use_df = pd.read_pickle(use_file)
@@ -54,7 +54,7 @@ for cluster_window in cluster_windows:
         plt.text(0.25, .95,'Cluster %d' % (yi + 1),
                  transform=plt.gca().transAxes)
         if yi==2:
-            plt.title(f'DTW on Scaled Data with Window={cluster_window}')
+            plt.title(f'DTW on Scaled Monthly Data with Window={cluster_window}')
     #  plt.tight_layout()
 #  plt.show()
 #  dba_km = TimeSeriesKMeans(n_clusters=n_cluster,
@@ -97,7 +97,7 @@ for cluster_window in cluster_windows:
              #  transform=plt.gca().transAxes)
     #  if yi == 1:
         #  plt.title("DBA with n_init=10")
-    plt.savefig(f'{n_cluster}_clusters_DTW_scaled_r{cluster_window}.png')
+    plt.savefig(f'{n_cluster}_clusters_DTW_scaled_r{cluster_window}_month.png')
     df = pd.DataFrame(list(zip(list(use_df.columns), dba_km.labels_)),
                       columns=['User', 'DBA cluster'])
     df.to_csv(f'{n_cluster}_DTW_results_scaled_r{cluster_window}_month.csv')
