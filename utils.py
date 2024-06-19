@@ -698,7 +698,7 @@ def users():
     print(np.min(users))
 
 
-def load_reg_data(sample=False, **kwargs):
+def load_reg_data(data_file='B:/LAP_inst_reg_data_with_dummies.pkl', sample=False, **kwargs):
     if sample:
         if not kwargs:
             n_sample = 300
