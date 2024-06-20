@@ -6,12 +6,10 @@ import matplotlib.pyplot as plt
 from tslearn.utils import to_time_series_dataset
 from tslearn.clustering import TimeSeriesKMeans, silhouette_score
 from tslearn.preprocessing import TimeSeriesScalerMeanVariance
-#  import plotly.graph_objects as go
-#  from plotly.subplots import make_subplots
 
 seed = 0
 np.random.seed(seed)
-#  n_sample = 100
+n_sample = 100
 n_cluster = 5
 n_init = 5
 max_iter_barycenter=10
@@ -22,7 +20,7 @@ use_file = file_path + 'y1_SFR_hourly.pkl'
 
 use_df = pd.read_pickle(use_file)
 use_df = ut.clean_outliers(use_df)
-#  use_df = use_df.sample(n=n_sample, axis=1, random_state=1)
+ use_df = use_df.sample(n=n_sample, axis=1, random_state=1)
 
 #  X1_train = ut.groupby_year(use_df)
 X1_train = ut.groupby_season(use_df)
