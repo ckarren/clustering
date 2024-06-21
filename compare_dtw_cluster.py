@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 from tslearn.utils import to_time_series_dataset
 from tslearn.clustering import TimeSeriesKMeans, silhouette_score
 from tslearn.preprocessing import TimeSeriesScalerMeanVariance
-#  import plotly.graph_objects as go
-#  from plotly.subplots import make_subplots
 
 seed = 0
 np.random.seed(seed)
@@ -57,48 +55,6 @@ for n_cluster in n_clusters:
                  transform=plt.gca().transAxes)
         if yi==2:
             plt.title(f'DTW on Scaled Yearly Data with n_clusters={n_cluster}')
-    #  plt.tight_layout()
-#  plt.show()
-#  dba_km = TimeSeriesKMeans(n_clusters=n_cluster,
-                          #  n_init=5,
-                          #  max_iter_barycenter=20,
-                          #  metric='dtw',
-                          #  random_state=seed,
-                          #  verbose=True)
-#  y_pred = dba_km.fit_predict(X_train)
-#
-#  for yi in range(n_cluster):
-    #  plt.subplot(3, n_cluster, yi + n_cluster + 1)
-    #  for xx in X_train[y_pred == yi]:
-        #  plt.plot(xx.ravel(), "k-", alpha=.2)
-    #  plt.plot(dba_km.cluster_centers_[yi].ravel(), "r-")
-    #  plt.xlim(0, sz)
-    #  plt.ylim(-4, 4)
-    #  plt.text(0.55, 0.85,'Cluster %d' % (yi + 1),
-             #  transform=plt.gca().transAxes)
-    #  if yi == 1:
-        #  plt.title("DBA with n_init=5")
-#
-#  dba_km = TimeSeriesKMeans(n_clusters=n_cluster,
-                          #  n_init=60,
-                          #  max_iter_barycenter=20,
-                          #  metric='dtw',
-                          #  verbose=True,
-                          #  random_state=seed
-                          #  )
-#  y_pred = dba_km.fit_predict(X_train)
-#
-#  for yi in range(n_cluster):
-    #  plt.subplot(3, n_cluster, yi + 2*n_cluster + 1)
-    #  for xx in X_train[y_pred == yi]:
-        #  plt.plot(xx.ravel(), "k-", alpha=.2)
-    #  plt.plot(dba_km.cluster_centers_[yi].ravel(), "r-")
-    #  plt.xlim(0, sz)
-    #  plt.ylim(-4, 4)
-    #  plt.text(0.55, 0.85,'Cluster %d' % (yi + 1),
-             #  transform=plt.gca().transAxes)
-    #  if yi == 1:
-        #  plt.title("DBA with n_init=10")
     plt.savefig(f'{n_cluster}_clusters_DTW_scaled_r1.png')
     df = pd.DataFrame(list(zip(list(use_df.columns), dba_km.labels_)),
                       columns=['User', 'DBA cluster'])
@@ -110,3 +66,4 @@ for n_cluster in n_clusters:
 df2 = pd.DataFrame(list(zip(sil_coef, inertia)),
                    columns=[])
 df2.to_csv('silhouette_score.csv')
+
