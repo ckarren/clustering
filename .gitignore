@@ -4,6 +4,7 @@ RadiusComps/
 SilouetteComps/
 660ad64e29cf39e107a80cbe/
 
+*.dta
 *.csv
 *.pkl
 *.png
