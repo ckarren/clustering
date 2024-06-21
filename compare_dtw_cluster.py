@@ -26,7 +26,8 @@ X1_train = X1_train.T
 X_train = to_time_series_dataset(X1_train)
 X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
 sz = X_train.shape[1]
-
+sil_coef = []
+inertia = []
 for n_cluster in n_clusters:
     begin = time.perf_counter()
     dba_km = TimeSeriesKMeans(n_clusters=n_cluster,
@@ -39,6 +40,8 @@ for n_cluster in n_clusters:
                                              'sakoe_chiba_radius':cluster_window},
                               n_jobs=-1)
     y_pred = dba_km.fit_predict(X_train)
+    sil_coef.append(silhouette_score(X_train, y_pred))
+    inertia.append(dba_km.inertia_)
 
     plt.figure()
     for yi in range(n_cluster):
