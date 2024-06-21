@@ -9,18 +9,19 @@ from tslearn.preprocessing import TimeSeriesScalerMeanVariance
 
 seed = 0
 np.random.seed(seed)
-n_sample = 100
+# n_sample = 100
 n_cluster = 5
 n_init = 5
 max_iter_barycenter=10
 #  cluster_windows = [2,3]
 cluster_window = 1
-file_path = ('../InputFiles/')
+file_path = '../../OneDrive - North Carolina State University/Documents/Clustering+Elasticity/InputFiles/'
+# file_path = ('..//InputFiles/')
 use_file = file_path + 'y1_SFR_hourly.pkl'
 
 use_df = pd.read_pickle(use_file)
 use_df = ut.clean_outliers(use_df)
- use_df = use_df.sample(n=n_sample, axis=1, random_state=1)
+# use_df = use_df.sample(n=n_sample, axis=1, random_state=1)
 
 #  X1_train = ut.groupby_year(use_df)
 X1_train = ut.groupby_season(use_df)
@@ -54,10 +55,10 @@ for yi in range(n_cluster):
              transform=plt.gca().transAxes)
     if yi==2:
         plt.title(f'DTW on Scaled Monthly Data with Window={cluster_window}')
-plt.savefig(f'{n_cluster}_clusters_DTW_scaled_r{cluster_window}_month.png')
+plt.savefig(f'{n_cluster}_clusters_DTW_scaled_r{cluster_window}_season.png')
 df = pd.DataFrame(list(zip(list(use_df.columns), dba_km.labels_)),
                   columns=['User', 'DBA cluster'])
-df.to_csv(f'{n_cluster}_DTW_results_scaled_r{cluster_window}_month.csv')
+df.to_csv(f'{n_cluster}_DTW_results_scaled_r{cluster_window}_season.csv')
 
 end = time.perf_counter()
 total = (end - begin) / 60
