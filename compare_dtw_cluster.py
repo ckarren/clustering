@@ -9,10 +9,10 @@ from tslearn.preprocessing import TimeSeriesScalerMeanVariance
 
 seed = 0
 np.random.seed(seed)
-n_sample = 500
+n_sample = 1000
 n_init = 5
 max_iter_barycenter=20
-cluster_window = 1
+cluster_window = 2
 n_clusters = [2, 3, 4, 5, 6, 7, 8, 9]
 file_path = str('../InputFiles/')
 use_file = file_path + 'y1_SFR_hourly.pkl'
@@ -58,12 +58,12 @@ for n_cluster in n_clusters:
     plt.savefig(f'{n_cluster}_clusters_DTW_scaled_r1.png')
     df = pd.DataFrame(list(zip(list(use_df.columns), dba_km.labels_)),
                       columns=['User', 'DBA cluster'])
-    df.to_csv(f'{n_cluster}_DTW_results_scaled_r1.csv')
+    df.to_csv(f'{n_cluster}_DTW_results_scaled_r{cluster_window}.csv')
 
     end = time.perf_counter()
     total = (end - begin) / 60
     print(f'Clustering took {total} minutes to run')
 df2 = pd.DataFrame(list(zip(sil_coef, inertia)),
-                   columns=[])
-df2.to_csv('silhouette_score.csv')
+                   columns=['Silhouette coef', 'Intertia'])
+df2.to_csv(f'silhouette_score_r{cluster_window}.csv')
 
