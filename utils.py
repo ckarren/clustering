@@ -719,13 +719,6 @@ def load_reg_data(data_file='B:/LAP_inst_reg_data_with_dummies.pkl', sample=Fals
         data_file = 'B:/LAP_inst_reg_data_with_dummies.pkl'
         return data_file
 
-def prep_ols(data):
-    y = np.asarray(data['Q'], dtype=np.float32)             #dependent
-    X = np.log(np.asarray(data['P']))
-    #  X = np.asarray(data.iloc[:,2:], dtype=np.float32)         #endog
-    X = sm.add_constant(X)
-    return y, X
-
 
 def print_columns():
     print('0 | 1 |2     |3  |4            |5           |6        |7     |8      |9    |10   |11   |12   |13      |14  |15    |16 |17')
@@ -737,11 +730,22 @@ def print_columns():
     print('period_2 |period_3 |period_4 |period_5 |period_6 |cluster_1 |cluster_2 |cluster_3 |cluster_4')
 
 
+def prep_ols(data):
+    y = np.asarray(data['Q'], dtype=np.float32)             #dependent
+    X = np.asarray(data['P_ave'])
+    #  X = np.asarray(data.iloc[:,2:], dtype=np.float32)         #endog
+    X = sm.add_constant(X)
+    return y, X
+
+
 def prep_lm_2sls(data):
     y = data['Q']               #dependent
-    X1 = data.iloc[:,7:-9]        #endog
+    #  X1 = data.iloc[:,7:-9]        #endog
+    x0 = data[['DOS_t', 'gt90', 'totalpp', 'tmin', 'ET']]
+    x1 = data.iloc[:,18:-9]
+    X1 = pd.concat([x0, x1], axis=1)
     X = data['P_ave']           #exog
-    inst = data.iloc[:,3:7]     #instrument
+    inst = data[['blockdiff2', 'DOS']]    #instrument
     return y, X1, X, inst
     
 
