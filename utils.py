@@ -739,11 +739,10 @@ def prep_ols(data):
 
 
 def prep_lm_2sls(data):
-    y = data['Q']               #dependent
-    #  X1 = data.iloc[:,7:-9]        #endog
+    y = data['Q']                 #dependent
     x0 = data[['DOS_t', 'gt90', 'totalpp', 'tmin', 'ET']]
     x1 = data.iloc[:,18:-9]
-    X1 = pd.concat([x0, x1], axis=1)
+    X1 = pd.concat([x0, x1], axis=1)  #endog
     X = data['P_ave']           #exog
     inst = data[['blockdiff2', 'DOS']]    #instrument
     return y, X1, X, inst
@@ -752,12 +751,11 @@ def prep_lm_2sls(data):
 def prep_sm_2sls(data):
     y = np.asarray(data['Q'], dtype=np.float32)             #dependent
     X0 = data['P_ave']                                          #endog
-    X1 = data.iloc[:,7:-9]                                       #exog
+    X1 = data.iloc[:,15:-9]                                       #exog
     X2 = data.iloc[:,-4:]
     X = np.asarray(pd.concat([X0, X1, X2], axis=1))
     X = sm.add_constant(X)
-    inst = data.iloc[:,3:7]                                    #instrument
+    inst = data.iloc[:,3:4]                                    #instrument
     inst = np.asarray(pd.concat([inst, X1, X2], axis=1))
     inst = sm.add_constant(inst)
     return y, X, inst
-print_columns()
