@@ -612,7 +612,7 @@ def prepare_regression(sample=False, **kwargs):
     df_bill.index = df_bill.index.map(str)
 
     clusters = pd.read_csv(
-        '../DTW_radius_comps/5_DTW_results_scaled_r1.csv',
+        '5_DTW_results_scaled_r1.csv',
         usecols=[
             'User',
             'DBA cluster'],
@@ -684,7 +684,9 @@ def prepare_regression(sample=False, **kwargs):
         q_all.to_pickle(f'LAP_inst_reg_data_{n_sample}.pkl')
     else:
         q_all.to_pickle('LAP_inst_reg_data.pkl')
-prepare_regression(sample=False, price='lagged average')
+        q_all.to_stata('LAP_inst_reg_data.dta')
+
+
 def add_dummies(file='reg_data.pkl'):
     file = file
     data = pd.read_pickle(
@@ -697,6 +699,9 @@ def add_dummies(file='reg_data.pkl'):
         dtype=int
     )
     data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
+    data.to_stata(f'{file[:-4]}_with_dummie.dta')
+
+
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
     users = [int(x) for x in users]
