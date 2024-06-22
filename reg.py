@@ -3,25 +3,24 @@ import os
 import pandas as pd
 import time
 import statsmodels.api as sm
-from statsmodels.sandbox.regression.gmm import IV2SLS
-import utils as ut
+from linearmodels.iv import IV2SLS as LM2SLS 
+from statsmodels.sandbox.regression.gmm import IV2SLS as SM2SLS
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from utils import prep_ols, prep_lm_2sls, prep_sm_2sls
 
 start = time.perf_counter()
-data = pd.read_pickle('B:/LAP_inst_reg_data_with_dummies.pkl')
+data = pd.read_pickle('LAP_inst_reg_data_100_with_dummies.pkl')
 load = time.perf_counter()
-# y = np.asarray(data['Q'], dtype=np.float32)
-X = np.asarray(data['P_ave'], dtype=np.float32)
-inst = np.asarray(data.iloc[:,2:], dtype=np.float32)
 
-# X = sm.add_constant(X)
-inst = sm.add_constant(inst)
-# model = IV2SLS(y, X, inst)
-
-model = sm.OLS(X, inst)
+y, X1, X, inst = prep_lm_2sls(data)
+#  model = sm.OLS(y, X)
+model = LM2SLS(y, X1, X, inst)
 results = model.fit()
-print(results.summary())
+print(results.summary)
 end = time.time()
 end = time.perf_counter()
-# results.summary().as_csv()
+#  with open('IV2sls_results.csv', 'w') as fh:
+    #  fh.write(results.summary().as_csv())
+
 print('load time: ', load - start)
 print('total time: ', end - start)
