@@ -625,7 +625,11 @@ def prepare_regression(sample=False, **kwargs):
     df_weather = pd.DataFrame(weather)
 
 
-    inst = pd.read_pickle('instruments.pkl')
+    if os.path.exists('instruments.pkl'):
+        inst = pd.read_pickle('instruments.pkl')
+    else:
+        instruments()
+        inst = pd.read_pickle('instruments.pkl')
     df_inst = pd.DataFrame(inst)
     
     #  summer_wd = weekdays.loc[weekdays.index.month.isin(summer)].copy()
