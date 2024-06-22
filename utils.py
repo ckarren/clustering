@@ -1,6 +1,8 @@
 import glob
 import numpy as np
 rng = np.random.default_rng(1234)
+import statsmodels.api as sm
+#  from statsmodels.sandbox.regression.gmm import IV2SLS
 from scipy import stats
 import matplotlib.pyplot as plt
 import pandas as pd 
@@ -503,7 +505,8 @@ def instruments():
        'DOS': DOS
    }
    df = pd.DataFrame(data, index=datetime_index[1:])
-   return df
+   df.to_pickle('instruments.pkl')
+   #  return df
 
 def weather_data():
     file1 = '3082341.csv'
@@ -609,7 +612,7 @@ def prepare_regression(sample=False, **kwargs):
     df_bill.index = df_bill.index.map(str)
 
     clusters = pd.read_csv(
-        '../RadiusComps/4_DTW_results_scaled_r2.csv',
+        '../DTW_radius_comps/5_DTW_results_scaled_r1.csv',
         usecols=[
             'User',
             'DBA cluster'],
@@ -620,7 +623,9 @@ def prepare_regression(sample=False, **kwargs):
     weather = pd.read_pickle('weather_data.pkl')
     df_weather = pd.DataFrame(weather)
 
-    inst = instruments()
+    inst = pd.read_pickle('instruments.pkl')
+    df_inst = pd.DataFrame(inst)
+    
     #  summer_wd = weekdays.loc[weekdays.index.month.isin(summer)].copy()
     p1y1 = df_y1.loc[df_y1.index.month.isin([7, 8])].sum().round(3)
     p2y1 = df_y1.loc[df_y1.index.month.isin([9, 10])].sum().round(3)
@@ -661,8 +666,9 @@ def prepare_regression(sample=False, **kwargs):
                     all_list[i]['P_ave'] = np.log(all_list[i]['P'] /
                                                   all_list[i]['Q']).round(3)
                     all_list[i]['Q'] = all_list[i]['Q'].apply(np.log).round(3)
+                    all_list[i] = all_list[i].assign(**df_inst.iloc[i-1,:])
+                    all_list[i]['DOS_t'] = df_inst.iloc[i,3]
                     all_list[i] = all_list[i].assign(**df_weather.iloc[i,:])
-                    all_list[i] = all_list[i].assign(**inst.iloc[i-1,:])
 
     q_all = pd.concat(all_list[1:], axis=0, join='inner')
     q_all = q_all.reset_index(names='user')
@@ -675,11 +681,9 @@ def prepare_regression(sample=False, **kwargs):
             n_sample = kwargs['n_sample']
         x = rng.choice(pd.unique(q_all['user']), n_sample, replace=False)
         q_all = q_all.loc[q_all['user'].isin(x)]
-        q_all.to_pickle(f'reg_data_{n_sample}.pkl')
+        q_all.to_pickle(f'LAP_inst_reg_data_{n_sample}.pkl')
     else:
         q_all.to_pickle('LAP_inst_reg_data.pkl')
-
-
 def add_dummies(file='reg_data.pkl'):
     file = file
     data = pd.read_pickle(
@@ -691,7 +695,7 @@ def add_dummies(file='reg_data.pkl'):
         drop_first=True,
         dtype=int
     )
-    data.to_pickle(f'B:/{file[:-4]}_with_dummies.pkl')
+    data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
     users = [int(x) for x in users]
@@ -715,4 +719,41 @@ def load_reg_data(data_file='B:/LAP_inst_reg_data_with_dummies.pkl', sample=Fals
         data_file = 'B:/LAP_inst_reg_data_with_dummies.pkl'
         return data_file
 
+def prep_ols(data):
+    y = np.asarray(data['Q'], dtype=np.float32)             #dependent
+    X = np.log(np.asarray(data['P']))
+    #  X = np.asarray(data.iloc[:,2:], dtype=np.float32)         #endog
+    X = sm.add_constant(X)
+    return y, X
 
+
+def print_columns():
+    print('0 | 1 |2     |3  |4            |5           |6        |7     |8      |9    |10   |11   |12   |13      |14  |15    |16 |17')
+    print('-------------------------------------------------------------------------------------------------------------------------')
+    print('Q | P |P_ave |FC |blockdiff1   |blockdiff2  |DOS_t-1  |DOS_t |ppdays |gt90 |pmax |tave |tmin |totalpp |cdd |rhave |pp |ET ')
+    print('\n')
+    print('-9       |-8       |-7       |-6       |-5       |-4        |-3        |-2        |-1')
+    print('-----------------------------------------------------------------------------------------------')
+    print('period_2 |period_3 |period_4 |period_5 |period_6 |cluster_1 |cluster_2 |cluster_3 |cluster_4')
+
+
+def prep_lm_2sls(data):
+    y = data['Q']               #dependent
+    X1 = data.iloc[:,7:-9]        #endog
+    X = data['P_ave']           #exog
+    inst = data.iloc[:,3:7]     #instrument
+    return y, X1, X, inst
+    
+
+def prep_sm_2sls(data):
+    y = np.asarray(data['Q'], dtype=np.float32)             #dependent
+    X0 = data['P_ave']                                          #endog
+    X1 = data.iloc[:,7:-9]                                       #exog
+    X2 = data.iloc[:,-4:]
+    X = np.asarray(pd.concat([X0, X1, X2], axis=1))
+    X = sm.add_constant(X)
+    inst = data.iloc[:,3:7]                                    #instrument
+    inst = np.asarray(pd.concat([inst, X1, X2], axis=1))
+    inst = sm.add_constant(inst)
+    return y, X, inst
+print_columns()
