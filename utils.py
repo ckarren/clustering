@@ -684,7 +684,12 @@ def prepare_regression(sample=False, **kwargs):
         q_all.to_pickle(f'LAP_inst_reg_data_{n_sample}.pkl')
     else:
         q_all.to_pickle('LAP_inst_reg_data.pkl')
+        q_all.to_stata('LAP_inst_reg_data.dta')
+
+
 prepare_regression(sample=False, price='lagged average')
+
+
 def add_dummies(file='reg_data.pkl'):
     file = file
     data = pd.read_pickle(
@@ -697,6 +702,9 @@ def add_dummies(file='reg_data.pkl'):
         dtype=int
     )
     data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
+    data.to_stata(f'{file[:-4]}_with_dummies.dta')
+
+add_dummies(file='LAP_inst_reg_data.pkl')
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
     users = [int(x) for x in users]
