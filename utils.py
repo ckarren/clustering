@@ -507,6 +507,7 @@ def instruments():
    df = pd.DataFrame(data, index=datetime_index[1:])
    df.to_pickle('instruments.pkl')
    #  return df
+    #
 
 def weather_data():
     file1 = '3082341.csv'
@@ -612,7 +613,7 @@ def prepare_regression(sample=False, **kwargs):
     df_bill.index = df_bill.index.map(str)
 
     clusters = pd.read_csv(
-        '5_DTW_results_scaled_r1.csv',
+        '../RadiusComps/5_DTW_results_scaled_r1.csv',
         usecols=[
             'User',
             'DBA cluster'],
@@ -623,7 +624,12 @@ def prepare_regression(sample=False, **kwargs):
     weather = pd.read_pickle('weather_data.pkl')
     df_weather = pd.DataFrame(weather)
 
-    inst = pd.read_pickle('instruments.pkl')
+
+    if os.path.exists('instruments.pkl'):
+        inst = pd.read_pickle('instruments.pkl')
+    else:
+        instruments()
+        inst = pd.read_pickle('instruments.pkl')
     df_inst = pd.DataFrame(inst)
     
     #  summer_wd = weekdays.loc[weekdays.index.month.isin(summer)].copy()
@@ -685,6 +691,7 @@ def prepare_regression(sample=False, **kwargs):
     else:
         q_all.to_pickle('LAP_inst_reg_data.pkl')
         q_all.to_stata('LAP_inst_reg_data.dta')
+
 
 
 def add_dummies(file='reg_data.pkl'):
