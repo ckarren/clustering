@@ -752,12 +752,12 @@ def prep_ols(data):
 
 
 def prep_lm_2sls(data):
-    y = data['Q']                 #dependent
-    x0 = data[['DOS_t', 'gt90', 'totalpp', 'tmin', 'ET']]
-    x1 = data.iloc[:,18:-9]
-    X1 = pd.concat([x0, x1], axis=1)  #endog
-    X = data['P_ave']           #exog
-    inst = data[['blockdiff2', 'DOS']]    #instrument
+    y = data['Q'].astype('float32')                 #dependent
+    x0 = data[['DOS_t', 'gt90', 'totalpp', 'tmin', 'ET']].astype('float32')
+    x1 = data.iloc[:,18:-9].astype('float32')
+    X1 = pd.concat([x0, x1], axis=1).astype('float32')  #endog
+    X = data['P_ave'].astype('float32')          #exog
+    inst = data[['blockdiff2', 'DOS']].astype('float32')   #instrument
     return y, X1, X, inst
     
 
