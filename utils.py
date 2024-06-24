@@ -507,6 +507,7 @@ def instruments():
    df = pd.DataFrame(data, index=datetime_index[1:])
    df.to_pickle('instruments.pkl')
    #  return df
+    #
 
 def weather_data():
     file1 = '3082341.csv'
@@ -612,7 +613,7 @@ def prepare_regression(sample=False, **kwargs):
     df_bill.index = df_bill.index.map(str)
 
     clusters = pd.read_csv(
-        '../DTW_radius_comps/5_DTW_results_scaled_r1.csv',
+        '../RadiusComps/5_DTW_results_scaled_r1.csv',
         usecols=[
             'User',
             'DBA cluster'],
@@ -623,7 +624,12 @@ def prepare_regression(sample=False, **kwargs):
     weather = pd.read_pickle('weather_data.pkl')
     df_weather = pd.DataFrame(weather)
 
-    inst = pd.read_pickle('instruments.pkl')
+
+    if os.path.exists('instruments.pkl'):
+        inst = pd.read_pickle('instruments.pkl')
+    else:
+        instruments()
+        inst = pd.read_pickle('instruments.pkl')
     df_inst = pd.DataFrame(inst)
     
     #  summer_wd = weekdays.loc[weekdays.index.month.isin(summer)].copy()
@@ -684,6 +690,10 @@ def prepare_regression(sample=False, **kwargs):
         q_all.to_pickle(f'LAP_inst_reg_data_{n_sample}.pkl')
     else:
         q_all.to_pickle('LAP_inst_reg_data.pkl')
+        q_all.to_stata('LAP_inst_reg_data.dta')
+
+
+
 def add_dummies(file='reg_data.pkl'):
     file = file
     data = pd.read_pickle(
@@ -696,6 +706,9 @@ def add_dummies(file='reg_data.pkl'):
         dtype=int
     )
     data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
+    data.to_stata(f'{file[:-4]}_with_dummie.dta')
+
+
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
     users = [int(x) for x in users]
@@ -739,12 +752,12 @@ def prep_ols(data):
 
 
 def prep_lm_2sls(data):
-    y = data['Q']                 #dependent
-    x0 = data[['DOS_t', 'gt90', 'totalpp', 'tmin', 'ET']]
-    x1 = data.iloc[:,18:-9]
-    X1 = pd.concat([x0, x1], axis=1)  #endog
-    X = data['P_ave']           #exog
-    inst = data[['blockdiff2', 'DOS']]    #instrument
+    y = data['Q'].astype('float32')                 #dependent
+    x0 = data[['DOS_t', 'gt90', 'totalpp', 'tmin', 'ET']].astype('float32')
+    x1 = data.iloc[:,18:-9].astype('float32')
+    X1 = pd.concat([x0, x1], axis=1).astype('float32')  #endog
+    X = data['P_ave'].astype('float32')          #exog
+    inst = data[['blockdiff2', 'DOS']].astype('float32')   #instrument
     return y, X1, X, inst
     
 
