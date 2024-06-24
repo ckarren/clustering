@@ -692,7 +692,7 @@ def prepare_regression(sample=False, **kwargs):
     else:
         #  q_all.to_pickle('LAP_inst_reg_data.pkl')
         q_all.to_stata('LAP_inst_reg_data.dta')
-
+prepare_regression(sample=False, price='lagged average')
 
 def add_dummies(file='reg_data.pkl'):
     file = file
