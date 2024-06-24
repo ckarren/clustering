@@ -668,7 +668,8 @@ def prepare_regression(sample=False, **kwargs):
                                              axis=1,
                                             join='inner')
                     all_list[i].columns = ['Q', 'P', 'cluster']
-                    all_list[i]['period'] = str((i % 6) + 1)
+                    #  all_list[i]['period'] = str((i % 6) + 1)
+                    all_list[i]['period'] = str(i + 1) 
                     all_list[i]['P_ave'] = np.log(all_list[i]['P'] /
                                                   all_list[i]['Q']).round(3)
                     all_list[i]['Q'] = all_list[i]['Q'].apply(np.log).round(3)
@@ -689,7 +690,7 @@ def prepare_regression(sample=False, **kwargs):
         q_all = q_all.loc[q_all['user'].isin(x)]
         q_all.to_pickle(f'LAP_inst_reg_data_{n_sample}.pkl')
     else:
-        q_all.to_pickle('LAP_inst_reg_data.pkl')
+        #  q_all.to_pickle('LAP_inst_reg_data.pkl')
         q_all.to_stata('LAP_inst_reg_data.dta')
 
 
@@ -756,7 +757,7 @@ def prep_lm_2sls(data):
     x1 = data.iloc[:,18:-9].astype('float32')
     X1 = pd.concat([x0, x1], axis=1).astype('float32')  #endog
     X = data['P_ave'].astype('float32')          #exog
-    inst = data[['blockdiff2', 'DOS']].astype('float32')   #instrument
+    inst = data[['blockdiff2', 'DOS']].astype('float32')    #instrument
     return y, X1, X, inst
     
 
