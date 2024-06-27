@@ -668,7 +668,8 @@ def prepare_regression(sample=False, **kwargs):
                                              axis=1,
                                             join='inner')
                     all_list[i].columns = ['Q', 'P', 'cluster']
-                    all_list[i]['period'] = str((i % 6) + 1)
+                    #  all_list[i]['period'] = str((i % 6) + 1)
+                    all_list[i]['period'] = str(i + 1) 
                     all_list[i]['P_ave'] = np.log(all_list[i]['P'] /
                                                   all_list[i]['Q']).round(3)
                     all_list[i]['Q'] = all_list[i]['Q'].apply(np.log).round(3)
@@ -687,10 +688,11 @@ def prepare_regression(sample=False, **kwargs):
             n_sample = kwargs['n_sample']
         x = rng.choice(pd.unique(q_all['user']), n_sample, replace=False)
         q_all = q_all.loc[q_all['user'].isin(x)]
-        q_all.to_pickle(f'H:/ckarren/Clustering/clustering/LAP_inst_reg_data_{n_sample}.pkl')
+        #  q_all.to_pickle(f'LAP_inst_reg_data_{n_sample}.pkl')
+        q_all.to_csv(f'LAP_inst_reg_data_{n_sample}.csv')
     else:
-        q_all.to_pickle('H:/ckarren/Clustering/clustering/LAP_inst_reg_data.pkl')
-        q_all.to_stata('H:/ckarren/Clustering/clustering/LAP_inst_reg_data.dta')
+        #  q_all.to_pickle('LAP_inst_reg_data.pkl')
+        q_all.to_stata('LAP_inst_reg_data.dta')
 
 
 def add_dummies(file='reg_data.pkl'):
@@ -706,8 +708,7 @@ def add_dummies(file='reg_data.pkl'):
     )
     data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
     # data.to_stata(f'H:/ckarren/Clustering/clustering/{file[:-4]}_with_dummies.dta')
-
-add_dummies(file='H:/ckarren/Clustering/clustering/LAP_inst_reg_data_100.pkl')
+    data.to_stata(f'{file[:-4]}_with_dummie.dta')
 
 
 def users():
@@ -753,12 +754,12 @@ def prep_ols(data):
 
 
 def prep_lm_2sls(data):
-    y = data['Q']                 #dependent
-    x0 = data[['DOS_t', 'gt90', 'totalpp', 'tmin', 'ET']]
-    x1 = data.iloc[:,18:-9]
-    X1 = pd.concat([x0, x1], axis=1)  #endog
-    X = data['P_ave']           #exog
-    inst = data[['blockdiff2', 'DOS']]    #instrument
+    y = data['Q'].astype('float32')                 #dependent
+    x0 = data[['DOS_t', 'gt90', 'totalpp', 'tmin', 'ET']].astype('float32')
+    x1 = data.iloc[:,18:-9].astype('float32')
+    X1 = pd.concat([x0, x1], axis=1).astype('float32')  #endog
+    X = data['P_ave'].astype('float32')          #exog
+    inst = data[['blockdiff2', 'DOS']].astype('float32')    #instrument
     return y, X1, X, inst
     
 
