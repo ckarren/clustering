@@ -14,9 +14,9 @@ file = (str('../InputFiles/y1_SFR_hourly.pkl'))
 df_use = pd.read_pickle(file)
 df_use_y = ut.groupby_year(df_use)
 df_use_m = ut.groupby_month(df_use)
-n_clusters = 4
+n_clusters = 7
 df = ut.analyse_dtw(n_clusters)
-radii = ['r1', 'r2', 'r3', 'r4', 'r5']
+radii = ['r0', 'r1', 'r2', 'r3']
 clusters = list(range(n_clusters))
 
 for r in radii:
@@ -32,30 +32,17 @@ for r in radii:
         df_use_rc =  df_use_y.filter(items=cluster)
         total = df_use_rc.sum(axis=1)
         average = df_use_rc.mean(axis=1)
+        peak_hour = str(average.idxmax())
 
-        #  for i in df_use_rc.columns:
-            #  i = str(i)
-            #  ax.plot(df_use_rc.index, df_use_rc[i], c='grey')
         axs[ci].plot(df_use_rc.index, average, c='crimson')
+        axs[ci].annotate(f'peak hour: {peak_hour}', 
+                         xy=(12,4)
+                         )
         #  ax[ci].set_title(f'Average Use for Cluster {c}, radius {r}', fontsize=14)
         #  axs[ci].set_xlabel('Time (hr)', fontsize=fontsize)
         #  axs[ci].set_ylabel('Volume (gallons)', fontsize=fontsize)
     fig.supxlabel('Time (hr)', fontsize=fontsize)
     fig.supylabel('Volume (gallons)', fontsize=fontsize)
     fig.suptitle(f'{n_clusters} Cluster Averages, {r}', fontsize=tfontsize)
-    #  plt.show()
-
-
-    plt.savefig(f'../{n_clusters}_clusters-means_{r}.png')
-
-# fig = go.Figure(data=[go.Scatter(x=df_use_r1c0.index, y=r1c0_average)])
-
-# for i in df_use_r1c0.columns:
-#     i = str(i)
-#     if len(df_use_r1c0[i]) == len(df_use_r1c0):
-#         fig.add_trace(go.Scatter(x=df_use_r1c0.index, y=df_use_r1c0[i],
-#         mode='lines',
-#         name=i))
-#     else:
-#         pass
-# fig.show()
+    plt.show()
+    #  plt.savefig(f'../{n_clusters}_clusters-means_{r}.png')

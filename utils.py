@@ -687,13 +687,10 @@ def prepare_regression(sample=False, **kwargs):
             n_sample = kwargs['n_sample']
         x = rng.choice(pd.unique(q_all['user']), n_sample, replace=False)
         q_all = q_all.loc[q_all['user'].isin(x)]
-        q_all.to_pickle(f'LAP_inst_reg_data_{n_sample}.pkl')
+        q_all.to_pickle(f'H:/ckarren/Clustering/clustering/LAP_inst_reg_data_{n_sample}.pkl')
     else:
         q_all.to_pickle('H:/ckarren/Clustering/clustering/LAP_inst_reg_data.pkl')
         q_all.to_stata('H:/ckarren/Clustering/clustering/LAP_inst_reg_data.dta')
-
-
-prepare_regression(sample=False, price='lagged average')
 
 
 def add_dummies(file='reg_data.pkl'):
@@ -707,10 +704,12 @@ def add_dummies(file='reg_data.pkl'):
         drop_first=True,
         dtype=int
     )
-    data.to_pickle(f'H:/ckarren/Clustering/clustering/{file[:-4]}_with_dummies.pkl')
-    data.to_stata(f'H:/ckarren/Clustering/clusteirng/{file[:-4]}_with_dummies.dta')
+    data.to_pickle(f'{file[:-4]}_with_dummies.pkl')
+    # data.to_stata(f'H:/ckarren/Clustering/clustering/{file[:-4]}_with_dummies.dta')
 
-add_dummies(file='LAP_inst_reg_data.pkl')
+add_dummies(file='H:/ckarren/Clustering/clustering/LAP_inst_reg_data_100.pkl')
+
+
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
     users = [int(x) for x in users]
