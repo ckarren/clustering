@@ -13,17 +13,17 @@ file = (str('../InputFiles/y1_SFR_hourly.pkl'))
 
 df_use = pd.read_pickle(file)
 df_use_y = ut.groupby_year(df_use)
-df_use_m = ut.groupby_month(df_use)
-n_clusters = 7
-df = ut.analyse_dtw(n_clusters)
-radii = ['r0', 'r1', 'r2', 'r3']
-clusters = list(range(n_clusters))
+#  df_use_m = ut.groupby_month(df_use)
+n_clusters = [4,5,6]
+radii = ['r1']
 
-for r in radii:
-    radius = df[r]
+for n_cluster in n_clusters:
+    df = ut.analyse_dtw(n_cluster)
+    radius = df['r1']
+    clusters = list(range(n_cluster))
     fig, axs = plt.subplots(
-        1, n_clusters, 
-        figsize=(24, 6), 
+        1, n_cluster, 
+        figsize=(48, 12), 
         sharex=True,
         sharey=True,
         layout='constrained')
@@ -34,7 +34,7 @@ for r in radii:
         average = df_use_rc.mean(axis=1)
         peak_hour = str(average.idxmax())
 
-        axs[ci].plot(df_use_rc.index, average, c='crimson')
+        axs[ci].plot(df_use_rc.index, average, c='crimson', linewidth=3)
         axs[ci].annotate(f'peak hour: {peak_hour}', 
                          xy=(12,4)
                          )
@@ -43,6 +43,6 @@ for r in radii:
         #  axs[ci].set_ylabel('Volume (gallons)', fontsize=fontsize)
     fig.supxlabel('Time (hr)', fontsize=fontsize)
     fig.supylabel('Volume (gallons)', fontsize=fontsize)
-    fig.suptitle(f'{n_clusters} Cluster Averages, {r}', fontsize=tfontsize)
+    fig.suptitle(f'Cluster Averages for k={n_cluster}', fontsize=tfontsize)
     plt.show()
-    #  plt.savefig(f'../{n_clusters}_clusters-means_{r}.png')
+    plt.savefig(f'../{n_clusters}_clusters-means_peaks.png')
