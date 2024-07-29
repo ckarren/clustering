@@ -12,8 +12,10 @@ warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 app = Dash(__name__)
 
-input_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/InputFiles/')
-output_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/OutputFiles/')
+#  input_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/InputFiles/')
+#  output_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/OutputFiles/')
+input_path = str('~/Documents/Clustering+Elasticity/InputFiles/')
+output_path = str('~/Documents/Clustering+Elasticity/OutputFiles/')
 #  df_lot= pd.read_pickle(input_path + 'lot.pkl')
 #  users = pd.read_pickle(input_path + 'user_ids.pkl')
 #  users.insert(0,'All users')
@@ -71,11 +73,11 @@ app.layout = html.Div([
 #  )
 @app.callback(
     Output('time-series-chart', 'figure'),
-    Input('user', 'value'),
+    #  Input('user', 'value'),
     Input('sample', 'value'),
     Input('feature', 'value')
 )
-def display_time_series(user, sample, feature):
+def display_time_series(sample, feature):
     #  water_use = pd.read_pickle(input_path + 'hourly_use_SFR_y1.pkl')
     #  sample = int(sample)
     #  water_use = water_use.sample(sample, axis=1, random_state=1)
@@ -85,7 +87,7 @@ def display_time_series(user, sample, feature):
         average_use = ut.groupby_season(water_use)#[0]
     elif feature == 'Average weekday demand pattern per year':
         average_use = ut.groupby_year(water_use)#[0]
-    fig = px.line(average_use, x=average_use.index, y=average_use[user])
+    fig = px.line(average_use, x=average_use.index, y=average_use[0])
 
     #  fig.update_xaxes(rangeslider_visible=True, rangeslider_thickness=0.10,
                     #  rangeselector=dict(

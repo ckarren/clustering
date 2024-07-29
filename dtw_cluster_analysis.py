@@ -44,5 +44,5 @@ for n_cluster in n_clusters:
     fig.supxlabel('Time (hr)', fontsize=fontsize)
     fig.supylabel('Volume (gallons)', fontsize=fontsize)
     fig.suptitle(f'Cluster Averages for k={n_cluster}', fontsize=tfontsize)
-    plt.show()
-    plt.savefig(f'../{n_clusters}_clusters-means_peaks.png')
+    #  plt.show()
+    plt.savefig(f'../{n_cluster}_clusters-means_peaks.png')

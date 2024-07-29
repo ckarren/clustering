@@ -83,8 +83,7 @@ def newDF(dflist):
         k = 'q' + str(i+1) + 'ave'
         dic[k] = item['Average']
 
-    new_df = pd.DataFrame(dic, 
-                            index = ind)
+    new_df = pd.DataFrame(dic, index = ind)
     return new_df
 
 def peakDF(dflist):
@@ -272,8 +271,11 @@ def groupby_season(df):
 
     return by_season_wd#, by_season_we
 
-def analyse_dtw(n_clusters):
-    """ Returns the number of members in each cluster, for radii 1-5"""
+def analyse_dtw(n_clusters, n_radius):
+    """ Returns the number of members in each cluster, for radii n_radius
+    n_clusters (int): 
+    n_radius (list): the radii used
+    """
     cluster_4 = {
         'r1': {
             0: 0,
@@ -344,32 +346,87 @@ def analyse_dtw(n_clusters):
             4: 3
         }
     }
-    rename_dicts = [cluster_4, cluster_5]
+    cluster_6 = {
+        'r1': {
+            0: 3,
+            1: 2,
+            2: 0,
+            3: 1,
+            4: 4,
+            5: 5
+        },
+        'r2': {
+            0: 4,
+            1: 2,
+            2: 1,
+            3: 0,
+            4: 3,
+            5: 5
+        },
+        'r3': {
+            0: 3,
+            1: 2,
+            2: 0,
+            3: 1,
+            4: 4,
+            5: 5
+        }
+    }
+    cluster_7 = {
+        'r1': {
+            0: 3,
+            1: 2,
+            2: 0,
+            3: 1,
+            4: 4,
+            5: 5,
+            6: 6
+        },
+        'r2': {
+            0: 4,
+            1: 2,
+            2: 1,
+            3: 0,
+            4: 3,
+            5: 5,
+            6: 6
+
+        },
+        'r3': {
+            0: 3,
+            1: 2,
+            2: 0,
+            3: 1,
+            4: 4,
+            5: 5,
+            6: 6
+        }    
+    }
+    rename_dicts = [cluster_4, cluster_5, cluster_6, cluster_7]
     li = []
     all_files = glob.glob(str(f'../RadiusComps/{n_clusters}_DTW_results_scaled_r[1-5].csv'))
     for filename in all_files:
         df = pd.read_csv(
             filename,
-            usecols=[0,1,2],
+            usecols=[1,2],
             header=0,
             index_col=0,
         )
         li.append(df)
 
     df = pd.concat(li, axis=1, ignore_index=True, verify_integrity=True) 
-    df.drop(columns=[2,4,6,8], inplace=True)
     df.rename(columns={
-        0: 'User ID',
-        1: 'r1',
-        3: 'r2',
-        5: 'r3',
-        7: 'r4',
-        9: 'r5'
+        0: 'r1',
+        1: 'r2',
+        2: 'r3',
+        3: 'r4', 
+        4: 'r5'
     }, inplace=True)
-    df.set_index('User ID', inplace=True)
+    df.set_index('User', inplace=True)
     for i, column in enumerate(df):
         df[column] = df[column].map(rename_dicts[n_clusters-4][str(column)])
     return df
+
 
 def plot_clusters(df):
     fig = make_subplots(rows=1, cols=i)
@@ -403,9 +460,10 @@ def compare_radius_means(n_clusters, radii=['r1', 'r2', 'r3', 'r4', 'r5']):
     produces plots to compare the means of clusters using the DTW algorithm with
     different radii of wrapping window
     n_clusters (int): the number of clusters used in the DTW algorithm
-    radii (list): list of """
+    radii (list): list of radii to compare
+    """
 
-    df = analyse_dtw(n_clusters)
+    df = analyse_dtw(n_clusters, radii)
     df_use = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl') 
     df_use = clean_outliers(df_use)
     df_use = groupby_year(df_use)
@@ -441,6 +499,84 @@ def compare_radius_means(n_clusters, radii=['r1', 'r2', 'r3', 'r4', 'r5']):
     fig.supylabel('Volume (gallons)', fontsize=fontsize)
     #  fig.suptitle(f'{n_clusters} Cluster Averages', fontsize=tfontsize)
     plt.show()
+
+def cluster_lot(n_clusters, radius):
+    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
+    cluster_data = pd.read_csv(cluster_file, 
+                               usecols=[1,2], 
+                               index_col=0)
+    cluster_df = pd.DataFrame(cluster_data)
+    lot_df = pd.read_pickle('../InputFiles/lot_SFR.pkl') 
+    lot_df.rename(columns={'MiuId': 'User'}, inplace=True)
+    lot_df.set_index('User', inplace=True)
+    lot_df = lot_df.join(cluster_df, how='inner')
+    return lot_df
+
+def cluster_use(n_clusters, radius, period):
+    clusters = list(range(n_clusters))
+    fontsize = 18
+
+    #  fig1, axs1 = plt.subplots(ncols=n_clusters,
+                            #  figsize=(24, 6),
+                            #  sharey=True,
+                            #  layout='constrained')
+    #  fig2, axs2 = plt.subplots(ncols=n_clusters,
+                            #  figsize=(24, 6),
+                            #  sharey=True,
+                            #  layout='constrained')
+    fig3, ax3 = plt.subplots()
+
+    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
+    cluster_data = pd.read_csv(cluster_file, 
+                               usecols=[1,2],
+                               index_col=0)
+    cluster_df = pd.DataFrame(cluster_data)
+
+    df_use = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl')
+    df_use = clean_outliers(df_use)
+    if period == 'year':
+        df_use = groupby_year(df_use)
+    elif period == 'month':
+        df_use = groupby_month(df_use)
+    elif period == 'season':
+        df_use = groupby_season(df_use)
+    else:
+        print('keyword period must be one of "year", "month", or "season".')
+    df_use_mean = df_use.mean(axis=1)
+    df_use_total = df_use.sum(axis=1)
+    total_dict = {}
+    mean_dict = {}
+    for ci, c in enumerate(clusters):
+        cluster = [str(x) for x in cluster_df[cluster_df['DBA cluster'] == c].index.to_list()]
+        df_cluster_use =  df_use.filter(items=cluster)
+        total = df_cluster_use.sum(axis=1)
+        average = df_cluster_use.mean(axis=1)
+        total_dict[f'Cluster {ci+1}'] = total
+        mean_dict[f'Cluster {ci+1}'] = average
+        #  axs1[ci].plot(df_cluster_use.index, average, c='crimson')
+        #  axs1[ci].set_title(f'Cluster {ci}', fontsize=fontsize)
+        #  axs2[ci].plot(df_cluster_use.index, total, c='crimson')
+        #  axs2[ci].set_title(f'Cluster {ci}', fontsize=fontsize)
+    ax3.stackplot(df_cluster_use.index, 
+                  total_dict.values(),
+                  labels=total_dict.keys(),
+                  alpha=0.8)
+    ax3.legend(loc='upper left', reverse=True, fontsize=fontsize)
+    ax3.set_xlabel('Time (hr)', fontsize=fontsize)
+    ax3.set_ylabel('Volume (gallons)', fontsize=fontsize)
+    ax3.set_xlim([0,23])
+    ax3.tick_params(axis='x', labelsize=14)
+    ax3.tick_params(axis='y', labelsize=14)
+    #  fig1.supxlabel('Time (hr)', fontsize=fontsize)
+    #  fig1.supylabel('Volume (gallons)', fontsize=fontsize)
+    #  fig2.supxlabel('Time (hr)', fontsize=fontsize)
+    #  fig2.supylabel('Volume (gallons)', fontsize=fontsize)
+    #  fig1.savefig('cluster_means.png')
+    #  fig2.savefig('cluster_totals.png')
+    fig3.savefig(f'{n_clusters}_clusters_stacked_total.png')
+    #  plt.show()
+    return df_use
+
 
 
 def calc_average_price():
