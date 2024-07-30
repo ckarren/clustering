@@ -3,6 +3,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 #  from utils import cluster_lot
+from utils import cluster_lot
 
 n_clusters = 5
 radius = 1
@@ -14,6 +15,11 @@ use_bill = pd.read_pickle('LAP_inst_reg_data.pkl')
 print(use_bill.head())
 #  lot_summary_stat = lot_df[atts].describe()
 #  lot_summary_stat.to_csv('all_summary_stats.csv')
+lot_df = cluster_lot(n_clusters=n_clusters, radius=radius)
+atts = ['EffectiveYearBuilt', 'SQFTmain', 'Bedrooms', 'Bathrooms', 'TotalValue']
+
+lot_summary_stat = lot_df[atts].describe()
+lot_summary_stat.to_csv('all_summary_stats.csv')
 
 #  for att in atts:
     #  fig, axs = plt.subplots(1, n_clusters, tight_layout=True, sharey=True)
