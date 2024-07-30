@@ -139,7 +139,6 @@ def clean_outliers_sd(df):
     df = df[df.columns[b]]
     return df
 
-
 def clean_outliers(df, lb=1.0, ub=400.0):
     df = df[df.columns[~((df < lb).all(axis=0))]]
     df = df[df.columns[~((df > ub).any(axis=0))]]
@@ -442,7 +441,6 @@ def compare_radius_means(n_clusters, radii=['r1', 'r2', 'r3', 'r4', 'r5']):
     #  fig.suptitle(f'{n_clusters} Cluster Averages', fontsize=tfontsize)
     plt.show()
 
-
 def calc_average_price():
     year1 = '../InputFiles/y1_SFR_hourly.pkl'
     use_y1 = pd.read_pickle(year1)
@@ -596,7 +594,6 @@ def weather_data():
             })
     df.to_pickle('weather_data.pkl')
 
-
 def prepare_regression(sample=False, **kwargs):
 
     year1 = '../InputFiles/y1_SFR_hourly.pkl'
@@ -694,7 +691,6 @@ def prepare_regression(sample=False, **kwargs):
         #  q_all.to_pickle('LAP_inst_reg_data.pkl')
         q_all.to_stata('LAP_inst_reg_data.dta')
 
-
 def add_dummies(file='reg_data.pkl'):
     file = file
     data = pd.read_pickle(
@@ -710,12 +706,10 @@ def add_dummies(file='reg_data.pkl'):
     # data.to_stata(f'H:/ckarren/Clustering/clustering/{file[:-4]}_with_dummies.dta')
     data.to_stata(f'{file[:-4]}_with_dummie.dta')
 
-
 def users():
     users = pd.read_pickle('../InputFiles/user_ids.pkl')
     users = [int(x) for x in users]
     print(np.min(users))
-
 
 def load_reg_data(data_file='B:/LAP_inst_reg_data_with_dummies.pkl', sample=False, **kwargs):
     if sample:
@@ -734,7 +728,6 @@ def load_reg_data(data_file='B:/LAP_inst_reg_data_with_dummies.pkl', sample=Fals
         data_file = 'B:/LAP_inst_reg_data_with_dummies.pkl'
         return data_file
 
-
 def print_columns():
     print('0 | 1 |2     |3  |4            |5           |6        |7     |8      |9    |10   |11   |12   |13      |14  |15    |16 |17')
     print('-------------------------------------------------------------------------------------------------------------------------')
@@ -744,14 +737,12 @@ def print_columns():
     print('-----------------------------------------------------------------------------------------------')
     print('period_2 |period_3 |period_4 |period_5 |period_6 |cluster_1 |cluster_2 |cluster_3 |cluster_4')
 
-
 def prep_ols(data):
     y = np.asarray(data['Q'], dtype=np.float32)             #dependent
     X = np.asarray(data['P_ave'])
     #  X = np.asarray(data.iloc[:,2:], dtype=np.float32)         #endog
     X = sm.add_constant(X)
     return y, X
-
 
 def prep_lm_2sls(data):
     y = data['Q'].astype('float32')                 #dependent
@@ -761,7 +752,6 @@ def prep_lm_2sls(data):
     X = data['P_ave'].astype('float32')          #exog
     inst = data[['blockdiff2', 'DOS']].astype('float32')    #instrument
     return y, X1, X, inst
-    
 
 def prep_sm_2sls(data):
     y = np.asarray(data['Q'], dtype=np.float32)             #dependent
