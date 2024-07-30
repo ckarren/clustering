@@ -426,7 +426,6 @@ def analyse_dtw(n_clusters, n_radius):
         df[column] = df[column].map(rename_dicts[n_clusters-4][str(column)])
     return df
 
-
 def plot_clusters(df):
     fig = make_subplots(rows=1, cols=i)
     for yi in range(i):
@@ -535,10 +534,13 @@ def cluster_use(n_clusters, radius, period):
     df_use = clean_outliers(df_use)
     if period == 'year':
         df_use = groupby_year(df_use)
+        ax3.set_xlim([0,23])
     elif period == 'month':
         df_use = groupby_month(df_use)
+        ax3.set_xlim([0,287])
     elif period == 'season':
         df_use = groupby_season(df_use)
+        ax3.set_xlim([0,95])
     else:
         print('keyword period must be one of "year", "month", or "season".')
     df_use_mean = df_use.mean(axis=1)
@@ -563,17 +565,18 @@ def cluster_use(n_clusters, radius, period):
     ax3.legend(loc='upper left', reverse=True, fontsize=fontsize)
     ax3.set_xlabel('Time (hr)', fontsize=fontsize)
     ax3.set_ylabel('Volume (gallons)', fontsize=fontsize)
-    ax3.set_xlim([0,23])
+    #  ax3.set_xlim([0,23])
     ax3.tick_params(axis='x', labelsize=14)
     ax3.tick_params(axis='y', labelsize=14)
+    ax3.grid(which='both', axis='x')
     #  fig1.supxlabel('Time (hr)', fontsize=fontsize)
     #  fig1.supylabel('Volume (gallons)', fontsize=fontsize)
     #  fig2.supxlabel('Time (hr)', fontsize=fontsize)
     #  fig2.supylabel('Volume (gallons)', fontsize=fontsize)
     #  fig1.savefig('cluster_means.png')
     #  fig2.savefig('cluster_totals.png')
-    fig3.savefig(f'{n_clusters}_clusters_stacked_total.png')
-    #  plt.show()
+    #  fig3.savefig(f'{n_clusters}_{period}_clusters_stacked_total.png')
+    plt.show()
     return df_use
 
 def calc_average_price():
