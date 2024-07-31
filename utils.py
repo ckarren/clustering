@@ -498,6 +498,46 @@ def compare_radius_means(n_clusters, radii=['r1', 'r2', 'r3', 'r4', 'r5']):
     #  fig.suptitle(f'{n_clusters} Cluster Averages', fontsize=tfontsize)
     plt.show()
 
+def cluster_summary(n_clusters, radius):
+    """ 
+    produces plots to compare the means of clusters using the DTW algorithm with
+    different radii of wrapping window
+    n_clusters (int): the number of clusters used in the DTW algorithm
+    radii (list): list of radii to compare
+    """
+
+    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
+    df_cluster = pd.read_csv(cluster_file,
+                             usecols=[1,2],
+                            header=0,
+                            index_col=0
+                            )
+    df_use1 = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl') 
+    df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
+    df_use = pd.concat([df_use1, df_use2], join='inner')
+    df_use = clean_outliers(df_use)
+    clusters = list(range(n_clusters))
+    fontsize = 14
+    fig, axs = plt.subplots(layout='constrained')
+
+    for ci, c in enumerate(clusters):
+        cluster = [str(x) for x in df_cluster[df_cluster['DBA cluster'] == c].index.to_list()]
+        df_use_c =  df_use.filter(items=cluster)
+        breakpoint()
+        total = df_use_rc.sum(axis=1)
+        average = df_use_rc.mean(axis=1)
+
+            #  for i in df_use_rc.columns:
+                #  i = str(i)
+                #  ax.plot(df_use_rc.index, df_use_rc[i], c='grey')
+        axs.plot(df_use_rc.index, average, c='crimson')
+        axs.set_title(f'Cluster {ci}', fontsize=fontsize)
+        axs.set_ylabel(f'Radius {ri+1}', fontsize=fontsize)
+    fig.supxlabel('Time (hr)', fontsize=fontsize)
+    fig.supylabel('Volume (gallons)', fontsize=fontsize)
+    #  fig.suptitle(f'{n_clusters} Cluster Averages', fontsize=tfontsize)
+    plt.show()
+cluster_summary(5,1)
 def cluster_lot(n_clusters, radius):
     cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
     cluster_data = pd.read_csv(cluster_file, 
