@@ -138,9 +138,10 @@ def clean_outliers_sd(df):
     df = df[df.columns[b]]
     return df
 
-def clean_outliers(df, lb=1.0, ub=400.0):
+def clean_outliers(df, lb=1.0, ub=400.0, ll=-10.0):
     df = df[df.columns[~((df < lb).all(axis=0))]]
     df = df[df.columns[~((df > ub).any(axis=0))]]
+    df = df[df.columns[~((df < ll).any(axis=0))]]
     return df
 
 def summary(df):
@@ -184,6 +185,10 @@ def add_time(n):
 
 def weekdays(dfx):
     return dfx[dfx.index.dayofweek < 5] 
+
+def annotate_axes(ax, text, fontsize=18):
+    ax.text(0.5, 0.5, text, transform-ax.transAxes,
+            ha='center', va='center', fontsize=fontsize, color='black')
 
 def pickle_feature(input_path, output_path):
     for i in range(1,7):
@@ -498,7 +503,7 @@ def compare_radius_means(n_clusters, radii=['r1', 'r2', 'r3', 'r4', 'r5']):
     #  fig.suptitle(f'{n_clusters} Cluster Averages', fontsize=tfontsize)
     plt.show()
 
-def cluster_summary(n_clusters, radius):
+def cluster_summary(n_clusters, radius, period='year'):
     """ 
     produces plots to compare the means of clusters using the DTW algorithm with
     different radii of wrapping window
@@ -516,23 +521,57 @@ def cluster_summary(n_clusters, radius):
     df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
     df_use = pd.concat([df_use1, df_use2], join='inner')
     df_use = clean_outliers(df_use)
+    fig, axs = plt.subplots(nrows=1,
+                            ncols=n_clusters,
+                            figsize=(48, 12), 
+                            sharey=True,
+                            layout='constrained')
+    if period == 'year':
+        df_use = groupby_year(df_use)
+        for ax in axs:
+            ax.set_xlim([0,23])
+            ax.set_ylim([0,5.8])
+    elif period == 'month':
+        df_use = groupby_month(df_use)
+        for ax in axs:
+            ax.set_xlim([0,287])
+            ax.set_ylim([0,5.8])
+    elif period == 'season':
+        df_use = groupby_season(df_use)
+        for ax in axs:
+            ax.set_xlim([0,95])
+            ax.set_ylim([0,5.8])
+    else:
+        print('keyword period must be one of "year", "month", or "season".')   
     clusters = list(range(n_clusters))
-    fontsize = 14
-    fig, axs = plt.subplots(layout='constrained')
+    fontsize = 18
+    #  colors =
+    cluster_names = ['Dominant Late Night',
+                     'Pronounced Late Morning',
+                     'Dominant Early Morning',
+                     'Dominant Evening',
+                     'Dominant Morning']
 
-    for ci, c in enumerate(clusters):
+    for c in clusters:
         cluster = [str(x) for x in df_cluster[df_cluster['DBA cluster'] == c].index.to_list()]
         df_use_c =  df_use.filter(items=cluster)
-        breakpoint()
-        total = df_use_rc.sum(axis=1)
-        average = df_use_rc.mean(axis=1)
+        total = df_use_c.sum(axis=1)
+        average = df_use_c.mean(axis=1)
+        #  average.to_csv(f'{n_clusters}_c{c}_average.csv')
+        #  total.to_csv(f'{n_clusters}_c{c}_total.csv')
 
             #  for i in df_use_rc.columns:
                 #  i = str(i)
                 #  ax.plot(df_use_rc.index, df_use_rc[i], c='grey')
-        axs.plot(df_use_rc.index, average, c='crimson')
-        axs.set_title(f'Cluster {ci}', fontsize=fontsize)
-        axs.set_ylabel(f'Radius {ri+1}', fontsize=fontsize)
+        axs[c].plot(df_use_c.index, average, "+-", linewidth=2)
+        axs[c].annotate(f'{cluster_names[c]}', 
+                        xy=(0.05, 0.95), xycoords='axes fraction', 
+                        #  transform=axs[c].transAxes,
+                        ha='left', va='top', 
+                        fontsize=14
+                        )
+        #  axs[ci].plot(df_use_c.index, average, linewidth=2)
+        #  axs[c].set_title(f'Cluster {c}', fontsize=fontsize)
     fig.supxlabel('Time (hr)', fontsize=fontsize)
     fig.supylabel('Volume (gallons)', fontsize=fontsize)
     #  fig.suptitle(f'{n_clusters} Cluster Averages', fontsize=tfontsize)
@@ -583,8 +622,8 @@ def cluster_use(n_clusters, radius, period):
         ax3.set_xlim([0,95])
     else:
         print('keyword period must be one of "year", "month", or "season".')
-    df_use_mean = df_use.mean(axis=1)
-    df_use_total = df_use.sum(axis=1)
+    #  df_use_mean = df_use.mean(axis=1)
+    #  df_use_total = df_use.sum(axis=1)
     total_dict = {}
     mean_dict = {}
     for ci, c in enumerate(clusters):
