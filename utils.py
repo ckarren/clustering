@@ -531,10 +531,8 @@ def cluster_summary(n_clusters, radius):
                 #  i = str(i)
                 #  ax.plot(df_use_rc.index, df_use_rc[i], c='grey')
         axs.plot(df_use_rc.index, average, c='crimson')
-        if ri == 0:
-            axs[ri, ci].set_title(f'Cluster {ci}', fontsize=fontsize)
-        if ci == 0:
-            axs[ri, ci].set_ylabel(f'Radius {ri+1}', fontsize=fontsize)
+        axs.set_title(f'Cluster {ci}', fontsize=fontsize)
+        axs.set_ylabel(f'Radius {ri+1}', fontsize=fontsize)
     fig.supxlabel('Time (hr)', fontsize=fontsize)
     fig.supylabel('Volume (gallons)', fontsize=fontsize)
     #  fig.suptitle(f'{n_clusters} Cluster Averages', fontsize=tfontsize)
