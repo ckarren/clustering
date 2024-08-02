@@ -514,9 +514,6 @@ def cluster_hourly_heatmap():
     fig.colorbar(im2, ax=ax2, location='bottom', label='Volume (gallons)')
     plt.show()
 
-
-
-cluster_hourly_heatmap()
 def cluster_summary(n_clusters, radius, **kwargs): 
     """ 
     produces plots to compare the means of clusters using the DTW algorithm with
@@ -590,8 +587,19 @@ def cluster_summary(n_clusters, radius, **kwargs):
     average_df = pd.DataFrame(average)
     #  total_df.to_csv('total_use_by_cluster.csv')
     average_df.to_csv('average_use_by_cluster.csv')
+def plot_inertia():
+    k = [2, 3, 4, 5, 6, 7, 8, 9]
+    inertia = [16.47, 14.38, 13.05, 12.00, 11.02, 10.38, 9.86, 9.40]
+    inertia2 = [8.66, 6.89, 6.09, 5.31, 5.03, 4.72, 4.49, 4.34]
+    fig, ax = plt.subplots()
+    ax.plot(k, inertia2, 'o-', linewidth=3)
+    ax.set_xlabel('k', fontsize=18)
+    ax.set_ylabel('Inertia', fontsize=18)
+    ax.tick_params(labelsize=14)
+    plt.show()
+plot_inertia()
 
-def cluster_summary_plots(n_clusters, radius, **kwargs): 
+def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs): 
     """ 
     produces plots to compare the means of clusters using the DTW algorithm with
     different radii of wrapping window
@@ -611,10 +619,23 @@ def cluster_summary_plots(n_clusters, radius, **kwargs):
     df_use1 = clean_outliers(df_use1)
     df_use2 = clean_outliers(df_use2)
     df_use = clean_outliers(df_use)
-    fig, axs = plt.subplots(nrows=1,
-                            ncols=n_clusters,
-                            figsize=(48, 12), 
-                            sharey=True,
+    if vertical:
+        nrows = n_clusters
+        ncols = 1
+        figsize = (8, 40)
+        sharex = True
+        sharey = False
+    else:
+        nrows = 1
+        ncols = n_clusters
+        figsize = (48, 12)
+        sharex = False
+        sharey = True
+    fig, axs = plt.subplots(nrows=nrows,
+                            ncols=ncols,
+                            figsize=figsize, 
+                            sharex=sharex,
+                            sharey=sharey,
                             layout='constrained')
     if kwargs:
         if kwargs['period'] == 'year':
@@ -651,10 +672,10 @@ def cluster_summary_plots(n_clusters, radius, **kwargs):
             #  for i in df_use_rc.columns:
                 #  i = str(i)
                 #  ax.plot(df_use_rc.index, df_use_rc[i], c='grey')
-        axs[c].plot(df_use_c.index, average, "+-", linewidth=2)
+        axs[c].plot(df_use_c.index, average, "o-", linewidth=3)
         axs[c].annotate(f'{cluster_names[c]}', 
-                        xy=(0.05, 0.95), xycoords='axes fraction', 
-                        ha='left', va='top', 
+                        xy=(0.95, 0.95), xycoords='axes fraction', 
+                        ha='right', va='top', 
                         fontsize=14
                         )
     fig.supxlabel('Time (hr)', fontsize=fontsize)
@@ -673,18 +694,10 @@ def cluster_lot(n_clusters, radius):
     lot_df = lot_df.join(cluster_df, how='inner')
     return lot_df
 
-def cluster_stacked_use(n_clusters, radius, period):
+def cluster_stacked_use(n_clusters, radius, period='year'):
     clusters = list(range(n_clusters))
     fontsize = 18
 
-    #  fig1, axs1 = plt.subplots(ncols=n_clusters,
-                            #  figsize=(24, 6),
-                            #  sharey=True,
-                            #  layout='constrained')
-    #  fig2, axs2 = plt.subplots(ncols=n_clusters,
-                            #  figsize=(24, 6),
-                            #  sharey=True,
-                            #  layout='constrained')
     fig3, ax3 = plt.subplots()
 
     cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
@@ -692,8 +705,15 @@ def cluster_stacked_use(n_clusters, radius, period):
                                usecols=[1,2],
                                index_col=0)
     cluster_df = pd.DataFrame(cluster_data)
+    cluster_names = ['Dominant Late Night',
+                     'Pronounced Late Morning',
+                     'Dominant Early Morning',
+                     'Dominant Evening',
+                     'Dominant Morning']
 
-    df_use = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl')
+    df_use1 = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl')
+    df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
+    df_use = pd.concat([df_use1, df_use2], join='inner')
     df_use = clean_outliers(df_use)
     if period == 'year':
         df_use = groupby_year(df_use)
@@ -706,21 +726,15 @@ def cluster_stacked_use(n_clusters, radius, period):
         ax3.set_xlim([0,95])
     else:
         print('keyword period must be one of "year", "month", or "season".')
-    #  df_use_mean = df_use.mean(axis=1)
-    #  df_use_total = df_use.sum(axis=1)
     total_dict = {}
     mean_dict = {}
-    for ci, c in enumerate(clusters):
+    for c in clusters:
         cluster = [str(x) for x in cluster_df[cluster_df['DBA cluster'] == c].index.to_list()]
         df_cluster_use =  df_use.filter(items=cluster)
         total = df_cluster_use.sum(axis=1)
         average = df_cluster_use.mean(axis=1)
-        total_dict[f'Cluster {ci+1}'] = total
-        mean_dict[f'Cluster {ci+1}'] = average
-        #  axs1[ci].plot(df_cluster_use.index, average, c='crimson')
-        #  axs1[ci].set_title(f'Cluster {ci}', fontsize=fontsize)
-        #  axs2[ci].plot(df_cluster_use.index, total, c='crimson')
-        #  axs2[ci].set_title(f'Cluster {ci}', fontsize=fontsize)
+        total_dict[f'{cluster_names[c]}'] = total
+        mean_dict[f'{cluster[c]}'] = average
     ax3.stackplot(df_cluster_use.index, 
                   total_dict.values(),
                   labels=total_dict.keys(),
@@ -728,19 +742,11 @@ def cluster_stacked_use(n_clusters, radius, period):
     ax3.legend(loc='upper left', reverse=True, fontsize=fontsize)
     ax3.set_xlabel('Time (hr)', fontsize=fontsize)
     ax3.set_ylabel('Volume (gallons)', fontsize=fontsize)
-    #  ax3.set_xlim([0,23])
     ax3.tick_params(axis='x', labelsize=14)
     ax3.tick_params(axis='y', labelsize=14)
     ax3.grid(which='both', axis='x')
-    #  fig1.supxlabel('Time (hr)', fontsize=fontsize)
-    #  fig1.supylabel('Volume (gallons)', fontsize=fontsize)
-    #  fig2.supxlabel('Time (hr)', fontsize=fontsize)
-    #  fig2.supylabel('Volume (gallons)', fontsize=fontsize)
-    #  fig1.savefig('cluster_means.png')
-    #  fig2.savefig('cluster_totals.png')
     #  fig3.savefig(f'{n_clusters}_{period}_clusters_stacked_total.png')
     plt.show()
-    return df_use
 
 # for elasticity regression:
 
