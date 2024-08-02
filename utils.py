@@ -484,29 +484,34 @@ def cluster_hourly_heatmap():
     df = pd.read_csv(file, header=0, index_col=0)
     df['Total'] = df.sum(axis=1)
     df = df.T
+    minmin = df.min().min()
+    maxmax = df.max().max()
+    breakpoint()
     fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1)
     #  ax2.pcolormesh(df.iloc[:-1,:])
-    im2 = ax2.imshow(df.iloc[:-1,:])
-    ax2.xaxis.set_ticklabels([])
+    im1 = ax1.imshow(df.iloc[:-1,:], vmin=minmin,
+                     vmax=maxmax)
+    #  ax2.xaxis.set_ticklabels([])
     #  ax2.yaxis.set_ticklabels(['1', '2', '3', '4', '5'])
-    ax2.set_yticks(np.arange(len(df.index)-1), ['1', '2', '3', '4', '5'])
-    ax2.set_ylabel('Cluster')
+    ax1.set_yticks(np.arange(len(df.index)-1), ['1', '2', '3', '4', '5'])
+    ax1.set_ylabel('Cluster')
     #  ax1.pcolormesh(df.iloc[-1:,:])
-    im1 = ax1.imshow(df.iloc[-1:,:])
-    ax1.yaxis.set_ticklabels([])
-    ax1.set_xlabel('Time (hr)')
-    ax1.set_ylabel('Total')
+    im2 = ax2.imshow(df.iloc[-1:,:], vmin=minmin,
+                     vmax=maxmax)
+    ax2.yaxis.set_ticklabels([])
+    ax2.set_xlabel('Time (hr)')
+    ax2.set_ylabel('Total')
     pad = 0.3
 
-    divider = VBoxDivider(
-        fig, 111,
-        horizontal=[Size.AxesX(ax1), Size.Scaled(1), Size.AxesX(ax2)],
-        vertical=[Size.AxesY(ax1), Size.Fixed(pad), Size.AxesY(ax2)])
-
-    ax1.set_axes_locator(divider.new_locator(0))
-    ax2.set_axes_locator(divider.new_locator(2))
-    fig.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(0, 1)),
-                 ax=ax1, location='right', label='Volume (gallons)')
+    #  divider = VBoxDivider(
+        #  fig, 111,
+        #  horizontal=[Size.AxesX(ax1), Size.Scaled(1), Size.AxesX(ax2)],
+        #  vertical=[Size.AxesY(ax1), Size.Fixed(pad), Size.AxesY(ax2)])
+#
+    #  ax1.set_axes_locator(divider.new_locator(0))
+    #  ax2.set_axes_locator(divider.new_locator(2))
+    #  fig.colorbar(im1, ax=ax1, location='bottom', label='Volume (gallons)')
+    fig.colorbar(im2, ax=ax2, location='bottom', label='Volume (gallons)')
     plt.show()
 
 
