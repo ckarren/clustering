@@ -1,4 +1,5 @@
 import glob
+import plotly.express as px
 import numpy as np
 rng = np.random.default_rng(1234)
 import statsmodels.api as sm
@@ -12,6 +13,7 @@ import pandas as pd
 import os
 
 
+# for dashboard 
 def tot_col(dfx):
     dfx['Total'] = dfx.sum(axis=1) 
     return dfx
@@ -193,6 +195,7 @@ def annotate_axes(ax, text, fontsize=18):
     ax.text(0.5, 0.5, text, transform-ax.transAxes,
             ha='center', va='center', fontsize=fontsize, color='black')
 
+# for clustering:
 def pickle_feature(input_path, output_path):
     for i in range(1,7):
         for j in range(1,3):
@@ -587,6 +590,7 @@ def cluster_summary(n_clusters, radius, **kwargs):
     average_df = pd.DataFrame(average)
     #  total_df.to_csv('total_use_by_cluster.csv')
     average_df.to_csv('average_use_by_cluster.csv')
+
 def plot_inertia():
     k = [2, 3, 4, 5, 6, 7, 8, 9]
     inertia = [16.47, 14.38, 13.05, 12.00, 11.02, 10.38, 9.86, 9.40]
@@ -597,7 +601,6 @@ def plot_inertia():
     ax.set_ylabel('Inertia', fontsize=18)
     ax.tick_params(labelsize=14)
     plt.show()
-plot_inertia()
 
 def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs): 
     """ 
@@ -692,6 +695,7 @@ def cluster_lot(n_clusters, radius):
     lot_df.rename(columns={'MiuId': 'User'}, inplace=True)
     lot_df.set_index('User', inplace=True)
     lot_df = lot_df.join(cluster_df, how='inner')
+    lot_df.to_csv('cluster_lot_info.csv')
     return lot_df
 
 def cluster_stacked_use(n_clusters, radius, period='year'):
@@ -748,6 +752,25 @@ def cluster_stacked_use(n_clusters, radius, period='year'):
     #  fig3.savefig(f'{n_clusters}_{period}_clusters_stacked_total.png')
     plt.show()
 
+
+def plot_cluster_map():
+    cluster_lot = pd.read_csv('../5_clusters_output/cluster_lot_info.csv', header=0,
+                              usecols=['User', 'Bedrooms', 'TotalValue',
+                                       'CENTER_LAT', 'CENTER_LON', 'DBA cluster'], 
+                              dtype={'User':'string', 'Bedrooms':'Int32',
+                                     'TotalValue':'Int32',
+                                     'CENTER_LAT':'Float32',
+                                     'CENTER_LON':'Float32', 'DBA cluster':'string'})
+    print(cluster_lot['DBA cluster'])
+
+    fig = px.scatter_mapbox(cluster_lot, lat="CENTER_LAT", lon="CENTER_LON",
+                            hover_name="User", color="DBA cluster", hover_data=["Bedrooms", "TotalValue"],
+                            color_discrete_sequence=["blue", "red", "yellow",
+                                                     "green", "purple"], zoom=10,
+                            height=750)
+    fig.update_layout(mapbox_style="open-street-map")
+    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    fig.show()
 # for elasticity regression:
 
 def calc_average_price():
