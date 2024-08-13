@@ -576,7 +576,7 @@ def cluster_summary(n_clusters, radius, period='year'):
     fig.supylabel('Volume (gallons)', fontsize=fontsize)
     #  fig.suptitle(f'{n_clusters} Cluster Averages', fontsize=tfontsize)
     plt.show()
-cluster_summary(5,1)
+
 def cluster_lot(n_clusters, radius):
     cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
     cluster_data = pd.read_csv(cluster_file, 
