@@ -524,6 +524,87 @@ def cluster_hourly_heatmap():
     fig.colorbar(im2, ax=ax2, location='bottom', label='Volume (gallons)')
     plt.show()
 
+def cluster_hourly_heatmap_all(n_clusters, period='year'):
+    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
+    #  cluster_file = f'../RadiusComps/{n_clusters}_euclidean_results_dtw{radius}.csv'
+    df_cluster = pd.read_csv(cluster_file,
+                             usecols=[1,2],
+                            header=0,
+                            index_col=0
+                            )
+    df_use1 = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl') 
+    df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
+    df_use = pd.concat([df_use1, df_use2], join='inner')
+    df_use1 = clean_outliers(df_use1)
+    df_use2 = clean_outliers(df_use2)
+    df_use = clean_outliers(df_use)
+    df_use = df_use.multiply(7.48).round(2)
+
+    clusters = list(range(n_clusters))
+    fig, axs = plt.subplots(nrows=1, ncols=n_clusters)
+
+    if period == 'year':
+        df_use = groupby_year(df_use)
+        for ax in axs:
+            ax.set_xlim([0,23])
+            #  ax.set_ylim([0,45.0])
+    elif period == 'month':
+        df_use = groupby_month(df_use)
+        for ax in axs:
+            ax.set_xlim([0,287])
+            #  ax.set_ylim([0,45.0])
+    elif period == 'season':
+        df_use = groupby_season(df_use)
+        for ax in axs:
+            ax.set_xlim([0,95])
+
+    for c in clusters:
+        cluster = [str(x) for x in df_cluster[df_cluster['DBA cluster'] == c].index.to_list()]
+        df_use_c =  df_use.filter(items=cluster)
+        #  total = df_use_c.sum(axis=1)
+        #  average = df_use_c.mean(axis=1)
+        #  for i in df_use_c.columns:
+            #  i = str(i)
+        axs[c].imshow(df_use_c.index, df_use_c.columns)
+        axs[c].plot(df_use_c.index, average, "o-", c=cluster_colors[c], linewidth=3)
+        axs[c].tick_params(axis='x', labelsize=14)
+        axs[c].tick_params(axis='y', labelsize=14)
+        axs[c].annotate(f'{cluster_names[c]}', 
+                        xy=(0.95, 0.95), xycoords='axes fraction', 
+                        ha='right', va='top', 
+                        fontsize=14
+                        )
+    fig.supxlabel('Time (hr)', fontsize=fontsize)
+    fig.supylabel('Volume (gallons)', fontsize=fontsize)
+    plt.show()
+
+    #  ax2.pcolormesh(clusters)
+    im1 = ax1.imshow(clusters, 
+                     vmin=minmin,
+                     vmax=maxmax)
+    #  ax2.xaxis.set_ticklabels([])
+    #  ax2.yaxis.set_ticklabels(['1', '2', '3', '4', '5'])
+    ax1.set_yticks(np.arange(len(df.index)-1), ['1', '2', '3', '4', '5'])
+    ax1.set_ylabel('Cluster')
+    #  ax1.pcolormesh(total)
+    im2 = ax2.imshow()
+    ax2.yaxis.set_ticklabels([])
+    ax2.set_xlabel('Time (hr)')
+    ax2.set_ylabel('Total')
+    pad = 0.3
+
+    #  divider = VBoxDivider(
+        #  fig, 111,
+        #  horizontal=[Size.AxesX(ax1), Size.Scaled(1), Size.AxesX(ax2)],
+        #  vertical=[Size.AxesY(ax1), Size.Fixed(pad), Size.AxesY(ax2)])
+#
+    #  ax1.set_axes_locator(divider.new_locator(0))
+    #  ax2.set_axes_locator(divider.new_locator(2))
+    #  fig.colorbar(im1, ax=ax1, location='bottom', label='Volume (gallons)')
+    fig.colorbar(im2, ax=ax2, location='bottom', label='Volume (gallons)')
+    plt.show()
+
+
 def cluster_summary(n_clusters, radius, **kwargs): 
     """ 
     produces plots to compare the means of clusters using the DTW algorithm with
@@ -861,7 +942,7 @@ def cluster_census_map():
                   domain_y=(0.1, 0.3)))
     #  fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
     fig.show()
-cluster_census_map()
+
 def cluster_census_pie():
     token = open(".public_token").read()
     file = '../5_clusters_output/cluster_by_censustract_percent.csv'
