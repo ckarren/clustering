@@ -28,7 +28,7 @@ app.layout = html.Div([
         ], style={'width': '31%', 'display': 'inline-block'}),
         
         html.Div([
-            html.P('Year), 
+            html.P('Year'), 
                 dcc.Dropdown(
                     id='year',
                     options= ['Y1P1 (Jul - Aug 2018)', 'Y1P2 (Sep - Oct 2018)',
