@@ -1,5 +1,6 @@
 import glob
 import plotly.express as px
+import plotly.graph_objects as go
 import numpy as np
 rng = np.random.default_rng(1234)
 import statsmodels.api as sm
@@ -696,7 +697,6 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
     fig.supylabel('Volume (gallons)', fontsize=fontsize)
     plt.show()
 
-
 def lot_cluster_hist(n_clusters):
     cluster_names = ['Dominant Late Night',
                      'Pronounced Late Morning',
@@ -740,8 +740,6 @@ def lot_cluster_hist(n_clusters):
         #  fig.supxlabel(f'{att}')
     fig.supylabel('Probability density')
     plt.show()
-
-lot_cluster_hist(5)
 
 def cluster_lot(n_clusters, radius):
     cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
@@ -838,11 +836,102 @@ def cluster_stacked_use(n_clusters, radius, period='year', operation='percent'):
     #  fig3.savefig(f'{n_clusters}_{period}_clusters_stacked_total.png')
     plt.show()
 
+def cluster_census_map():
+    token = open(".public_token").read()
+    #  file = '../5_clusters_output/cluster_lot_info.csv'
+    file = '../5_clusters_output/cluster_by_censustract_percent.csv'
+    cluster_lot = pd.read_csv(file, header=0) 
+    #  cluster_lot['DBA cluster'] = cluster_lot['DBA cluster'].map(
+    cluster_lot.rename(columns={'0': 'Dominant Late Night',
+                                '1': 'Pronounced Early Morning',
+                                '2': 'Dominant Early Morning',
+                                '3': 'Dominant Evening',
+                                '4': 'Dominant Morning'}, 
+                       inplace=True)
+    breakpoint()
+    fig = px.scatter_mapbox(cluster_lot, 
+                            lat="LAT",
+                            lon="LON",
+                            hover_name="TRACTCE",
+                            zoom=20,
+                            height=900)
+    #  fig.update_layout(mapbox_style="open-street-map")
+    fig.update_layout(mapbox_style="light", mapbox_accesstoken=token)
+    fig.add_trace(go.Pie(values=cluster_lot.iloc[0,3:8], domain_x=(0.2,0.4),
+                  domain_y=(0.1, 0.3)))
+    #  fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    fig.show()
+cluster_census_map()
+def cluster_census_pie():
+    token = open(".public_token").read()
+    file = '../5_clusters_output/cluster_by_censustract_percent.csv'
+    cluster_lot = pd.read_csv(file, header=0)
+
+    cluster_lot.rename(columns={'0': 'Dominant Late Night', 
+                                '1': 'Pronounced Late Morning', 
+                                '2': 'Dominant Early Morning', 
+                                '3': 'Dominant Evening', 
+                                '4': 'Dominant Morning'}, 
+                       inplace=True)
+
+    fig = go.Figure()
+    segment_names = ['Dominant Late Night',
+                     'Dominant Early Morning',
+                     'Pronounced Late Morning',
+                     'Dominant Evening',
+                     'Dominant Morning']
+    segment_colours = ['lightsteelblue',
+                      'royalblue',
+                      'mediumslateblue',
+                      'mediumblue',
+                      'midnightblue']
+    #  segment_colours = ['midnightblue',
+                       #  'mediumblue',
+                       #  'mediumslateblue',
+                       #  'royalblue',
+                       #  'lightsteelblue']
+
+
+    # Plot all segments
+    for name, colour in zip(
+        segment_names, segment_colours
+    ):
+        segment_trace = go.Scattermapbox(
+            lon=cluster_lot["LON"],
+            lat=cluster_lot["LAT"],
+            mode="markers",
+            marker=go.scattermapbox.Marker(
+                size=cluster_lot[name] * 200,
+                sizemode="diameter",
+                color=colour,
+                opacity=0.8
+            ),
+            name=name,
+            hoverinfo="text",
+            text=cluster_lot['TRACTCE'],
+            # ^ first characters of UK post code
+        )
+        fig.add_trace(segment_trace)
+
+    # Update figure
+    fig.update_layout(
+        mapbox_style="light",
+        mapbox_accesstoken=token,
+        title_text="An interesting chart with bubbles & segments",
+        width=800,
+        height=600,
+        xaxis_title="Longitude",
+        yaxis_title="Latitude",
+        margin=dict(b=0, t=0, l=0, r=0),
+        legend=dict(yanchor="bottom", y=0.02, xanchor="left", x=0.02),
+    )
+    fig.show()
+
 def plot_cluster_map():
     #  token = open(".mapbox_token").read()
     token = open(".public_token").read()
-    #  file = '../5_clusters_output/cluster_lot_info.csv'
-    file = '9_cluster_r1_lot_census_tract.csv'
+    file = '../5_clusters_output/cluster_lot_info.csv'
+    #  file = '9_cluster_r1_lot_census_tract.csv'
     cluster_lot = pd.read_csv(file, header=0,
                               usecols=['User', 'Bedrooms', 'TotalValue',
                                        'CENTER_LAT', 'CENTER_LON', 'DBA cluster'], 
@@ -850,11 +939,11 @@ def plot_cluster_map():
                                      'TotalValue':'Int32',
                                      'CENTER_LAT':'Float32',
                                      'CENTER_LON':'Float32', 'DBA cluster':'string'})
-    #  cluster_lot['DBA cluster'] = cluster_lot['DBA cluster'].map({'0': 'Dominant Late Night',
-                                                                #  '1': 'Pronounced Early Morning',
-                                                                #  '2': 'Dominant Early Morning',
-                                                                #  '3': 'Dominant Evening',
-                                                                #  '4': 'Dominant Morning'})
+    cluster_lot['DBA cluster'] = cluster_lot['DBA cluster'].map({'0': 'Dominant Late Night',
+                                                                '1': 'Pronounced Early Morning',
+                                                                '2': 'Dominant Early Morning',
+                                                                '3': 'Dominant Evening',
+                                                                '4': 'Dominant Morning'})
 
     fig = px.scatter_mapbox(cluster_lot, 
                             lat="CENTER_LAT", 
@@ -862,10 +951,11 @@ def plot_cluster_map():
                             labels={'DBA cluster': 'Cluster'},
                             hover_name="User", 
                             color="DBA cluster", 
-                            #  color_discrete_sequence=cluster_colors,
+                            color_discrete_sequence=cluster_colors,
                             zoom=10,
                             height=800)
     #  fig.update_layout(mapbox_style="open-street-map")
+    fig.update_traces(cluster=dict(enabled=True))
     fig.update_layout(mapbox_style="light", mapbox_accesstoken=token)
     #  fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
     fig.show()
