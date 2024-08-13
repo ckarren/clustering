@@ -4,7 +4,7 @@ import utils as ut
 import matplotlib.pyplot as plt
 from tslearn.utils import to_time_series_dataset
 from tslearn.clustering import TimeSeriesKMeans, silhouette_score
-#  from tslearn.preprocessing import TimeSeriesScalerMeanVariance
+from tslearn.preprocessing import TimeSeriesScalerMeanVariance
 #  import plotly.graph_objects as go
 #  from plotly.subplots import make_subplots
 
@@ -12,13 +12,12 @@ seed = 0
 np.random.seed(seed)
 n_cluster = 5
 
-file_path = str('~../InputFiles/')
+file_path = str('../InputFiles/')
 use_file = file_path + 'y1_SFR_hourly.pkl'
 
 use_df = pd.read_pickle(use_file)
 use_df = ut.clean_outliers(use_df)
 #  use_df = use_df.sample(n=n_sample, axis=1, random_state=1)
-X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
 sil_coef = []
 inertia = []
 #  model = 'compare' # one of 'Kmeans', 'DBA', 'Soft-DTW', 'compare'
@@ -28,6 +27,7 @@ inertia = []
 X1_train = ut.groupby_year(use_df)
 X1_train = X1_train.T
 X_train = to_time_series_dataset(X1_train)
+X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
 sz = X_train.shape[1]
 euclidean_km = TimeSeriesKMeans(n_clusters=n_cluster,
                           random_state=seed,
@@ -44,7 +44,7 @@ for yi in range(n_cluster):
     plt.subplot(2, n_cluster, yi + 1)
     for xx in X_train[y_pred == yi]:
         plt.plot(xx.ravel(), "k-", alpha=.2)
-    plt.plot(dba_km.cluster_centers_[yi].ravel(), "r-")
+    plt.plot(euclidean_km.cluster_centers_[yi].ravel(), "r-")
     plt.xlim(0, sz)
     #  plt.ylim(-4, 4)
     plt.text(0.55, 0.85,'Cluster %d' % (yi + 1),
