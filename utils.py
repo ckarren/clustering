@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from mpl_toolkits.axes_grid1.axes_divider import HBoxDivider, VBoxDivider
 import mpl_toolkits.axes_grid1.axes_size as Size
+import matplotlib.ticker as ticker
 import pandas as pd 
 import os
 
@@ -538,78 +539,53 @@ def cluster_hourly_heatmap_all(n_clusters, radius, period='year'):
     df_use = clean_outliers(df_use)
 
     clusters = list(range(n_clusters))
+    cluster_names = ['Dominant Late Night',
+                     'Pronounced Late Morning',
+                     'Dominant Early Morning',
+                     'Dominant Evening',
+                     'Dominant Morning']
+
     fig, axs = plt.subplots(nrows=1, ncols=n_clusters)
-    aspects = [1/20, 1/30, 1/20, 1/30, 1/30]
+    aw = .2
+    ah = .8
+    margin = 0.05
 
     if period == 'year':
         df_use = groupby_year(df_use)
-        #  for ax in axs:
-            #  ax.set_xlim([0,23])
-            #  ax.set_ylim([0,45.0])
     elif period == 'month':
         df_use = groupby_month(df_use)
-        #  for ax in axs:
-            #  ax.set_xlim([0,287])
-            #  ax.set_ylim([0,45.0])
     elif period == 'season':
         df_use = groupby_season(df_use)
-        #  for ax in axs
-            #  ax.set_xlim([0,95])
 
     normalized_use = df_use / df_use.max() 
 
     for c in clusters:
+        #  cluster = [str(x) for x in df_cluster[df_cluster['k-means cluster'] == c].index.to_list()]
         cluster = [str(x) for x in df_cluster[df_cluster['DBA cluster'] == c].index.to_list()]
         df_use_c =  normalized_use.filter(items=cluster)
         df_use_c = df_use_c.T
-        #  total = df_use_c.sum(axis=1)
-        #  average = df_use_c.mean(axis=1)
-        #  if c == 1:
-            #  for i in df_use_c.columns:
-                #  i = str(i)
-                #  axs[c].plot(df_use_c.index, df_use_c[i], c='grey')
-
-        axs[c].imshow(df_use_c)
-        axs[c].set_aspect(aspects[c])
-        #  axs[c].plot(df_use_c.index, average, "o-", c=cluster_colors[c], linewidth=3)
-        #  axs[c].tick_params(axis='x', labelsize=14)
-        #  axs[c].tick_params(axis='y', labelsize=14)
-        #  axs[c].annotate(f'{cluster_names[c]}',
-                        #  xy=(0.95, 0.95), xycoords='axes fraction',
-                        #  ha='right', va='top',
-                        #  fontsize=14
-                        #  )
-    #  fig.supxlabel('Time (hr)', fontsize=fontsize)
-    #  fig.supylabel('Volume (gallons)', fontsize=fontsize)
+        im = axs[c].imshow(df_use_c, aspect='auto')
+        axs[c].tick_params(axis='x', labelsize=10)
+        axs[c].yaxis.set_ticklabels([])
+        axs[c].xaxis.set_major_locator(ticker.FixedLocator([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]))
+        axs[c].xaxis.set_ticklabels(['00:00','01:00', '02:00', '03:00', '04:00',
+                                     '05:00', '06:00', '07:00', '08:00',
+                                     '09:00', '10:00', '11:00', '12:00',
+                                     '01:00', '02:00', '03:00', '04:00',
+                                     '05:00', '06:00', '07:00', '08:00',
+                                     '09:00', '10:00', '11:00'],
+                                    rotation='vertical')
+        axs[c].annotate(f'{cluster_names[c]}',
+                        xy=(0.50, 1.03), xycoords='axes fraction',
+                        ha='center', va='top',
+                        fontsize=14
+                        )
+        if c == 4:
+            cbar = axs[c].figure.colorbar(im, ax=axs[c], location='right',
+                                          orientation='vertical')
     plt.show()
 
-    #  ax2.pcolormesh(clusters)
-    #  im1 = ax1.imshow(clusters,
-                     #  vmin=minmin,
-                     #  vmax=maxmax)
-    #  ax2.xaxis.set_ticklabels([])
-    #  ax2.yaxis.set_ticklabels(['1', '2', '3', '4', '5'])
-    #  ax1.set_yticks(np.arange(len(df.index)-1), ['1', '2', '3', '4', '5'])
-    #  ax1.set_ylabel('Cluster')
-    #  ax1.pcolormesh(total)
-    #  im2 = ax2.imshow()
-    #  ax2.yaxis.set_ticklabels([])
-    #  ax2.set_xlabel('Time (hr)')
-    #  ax2.set_ylabel('Total')
-    #  pad = 0.3
 
-    #  divider = VBoxDivider(
-        #  fig, 111,
-        #  horizontal=[Size.AxesX(ax1), Size.Scaled(1), Size.AxesX(ax2)],
-        #  vertical=[Size.AxesY(ax1), Size.Fixed(pad), Size.AxesY(ax2)])
-#
-    #  ax1.set_axes_locator(divider.new_locator(0))
-    #  ax2.set_axes_locator(divider.new_locator(2))
-    #  fig.colorbar(im1, ax=ax1, location='bottom', label='Volume (gallons)')
-    #  fig.colorbar(im2, ax=ax2, location='bottom', label='Volume (gallons)')
-    #  plt.show()
-
-cluster_hourly_heatmap_all(5, 1, period='year')
 def cluster_summary(n_clusters, radius, **kwargs): 
     """ 
     produces plots to compare the means of clusters using the DTW algorithm with
