@@ -1,4 +1,5 @@
 import glob
+from sklearn.preprocessing import normalize
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
@@ -150,7 +151,7 @@ def clean_outliers_sd(df):
     df = df[df.columns[b]]
     return df
 
-def clean_outliers(df, lb=1.0, ub=400.0, ll=-10.0):
+def clean_outliers(df, lb=1.0, ub=100.0, ll=-10.0):
     df = df[df.columns[~((df < lb).all(axis=0))]]
     df = df[df.columns[~((df > ub).any(axis=0))]]
     df = df[df.columns[~((df < ll).any(axis=0))]]
@@ -525,6 +526,78 @@ def cluster_hourly_heatmap():
     fig.colorbar(im2, ax=ax2, location='bottom', label='Volume (gallons)')
     plt.show()
 
+def cluster_hourly_heatmap_ind(n_clusters, radius):
+    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
+    #  cluster_file = f'../RadiusComps/{n_clusters}_euclidean_results_dtw{radius}.csv'
+    df_cluster = pd.read_csv(cluster_file,
+                             usecols=[1,2],
+                            header=0,
+                            index_col=0
+                            )
+    cluster_cust = []
+    clusters = list(range(n_clusters))
+    for cluster in clusters:
+        df_cluster1 = df_cluster[df_cluster['DBA cluster'] == cluster]
+        cluster_cust.append(str(np.random.choice(df_cluster1.index.values)))
+
+    df_use1 = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl') 
+    df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
+    df_use = pd.concat([df_use1, df_use2], join='inner')
+    df_use = clean_outliers(df_use)
+
+    df_use = df_use.filter(cluster_cust)
+    clusters = list(range(n_clusters))
+    cluster_array = []
+    for col in df_use:
+        a = df_use[col].values.reshape((730,24))
+        a = normalize(a, norm='max')
+        cluster_array.append(a)
+    cluster_names = ['Dominant Late Night',
+                     'Pronounced Late Morning',
+                     'Dominant Early Morning',
+                     'Dominant Evening',
+                     'Dominant Morning']
+
+    fig, axs = plt.subplots(nrows=1, ncols=n_clusters)
+    aw = .2
+    ah = .8
+    margin = 0.05
+    #  if period == 'year':
+        #  df_use = groupby_year(df_use)
+    #  elif period == 'month':
+        #  df_use = groupby_month(df_use)
+    #  elif period == 'season':
+        #  df_use = groupby_season(df_use)
+
+
+    for c in clusters:
+        #  cluster = [str(x) for x in df_cluster[df_cluster['k-means cluster'] == c].index.to_list()]
+        #  cluster = [str(x) for x in df_cluster[df_cluster['DBA cluster'] == c].index.to_list()]
+        #  df_use_c =  normalized_use.filter(items=cluster)
+        #  df_use_c = df_use_c.T
+        im = axs[c].imshow(cluster_array[c], aspect='auto')
+        axs[c].tick_params(axis='x', labelsize=10)
+        axs[c].yaxis.set_ticklabels([])
+        axs[c].xaxis.set_major_locator(ticker.FixedLocator([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]))
+        axs[c].xaxis.set_ticklabels(['00:00','01:00', '02:00', '03:00', '04:00',
+                                     '05:00', '06:00', '07:00', '08:00',
+                                     '09:00', '10:00', '11:00', '12:00',
+                                     '01:00', '02:00', '03:00', '04:00',
+                                     '05:00', '06:00', '07:00', '08:00',
+                                     '09:00', '10:00', '11:00'],
+                                    rotation='vertical')
+        axs[c].annotate(f'{cluster_names[c]}',
+                        xy=(0.50, 1.03), xycoords='axes fraction',
+                        ha='center', va='top',
+                        fontsize=14
+                        )
+        if c == 4:
+            cbar = axs[c].figure.colorbar(im, ax=axs[c], location='right',
+                                          orientation='vertical')
+    plt.show()
+
+cluster_hourly_heatmap_ind(5,1)
+
 def cluster_hourly_heatmap_all(n_clusters, radius, period='year'):
     cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
     #  cluster_file = f'../RadiusComps/{n_clusters}_euclidean_results_dtw{radius}.csv'
@@ -584,7 +657,6 @@ def cluster_hourly_heatmap_all(n_clusters, radius, period='year'):
             cbar = axs[c].figure.colorbar(im, ax=axs[c], location='right',
                                           orientation='vertical')
     plt.show()
-
 
 def cluster_summary(n_clusters, radius, **kwargs): 
     """ 
