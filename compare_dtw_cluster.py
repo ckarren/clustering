@@ -13,24 +13,35 @@ np.random.seed(seed)
 n_init = 5
 max_iter_barycenter=20
 cluster_window = 1
-n_clusters = [6, 7, 8, 9]
+#  n_clusters = [6, 7, 8, 9]
+n_clusters = 5
 file_path = str('../InputFiles/')
 use_file = file_path + 'y1_SFR_hourly.pkl'
 
 use_df = pd.read_pickle(use_file)
 use_df = ut.clean_outliers(use_df)
 #  use_df = use_df.sample(n=n_sample, axis=1, random_state=1)
-
-X1_train = ut.groupby_year(use_df)
-X1_train = X1_train.T
-X_train = to_time_series_dataset(X1_train)
-X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
-sz = X_train.shape[1]
-sil_coef = []
-inertia = []
-for n_cluster in n_clusters:
-    begin = time.perf_counter()
-    dba_km = TimeSeriesKMeans(n_clusters=n_cluster,
+seasons = ['summer', 'autumn', 'winter', 'spring']
+#  X1_train = ut.groupby_year(use_df)
+begin = time.perf_counter()
+for season in seasons:
+    X1_train = ut.groupby_season(use_df)
+    if season == 'summer':
+        X1_train = X1_train.iloc[0:24,:]
+    elif season == 'autumn':
+        X1_train = X1_train.iloc[24:48,:]
+    elif season == 'winter':
+        X1_train = X1_train.iloc[48:72,:]
+    elif season == 'spring':
+        X1_train = X1_train.iloc[72:97,:]
+        
+    X1_train = X1_train.T
+    X_train = to_time_series_dataset(X1_train)
+    X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
+    sz = X_train.shape[1]
+    sil_coef = []
+    inertia = []
+    dba_km = TimeSeriesKMeans(n_clusters=n_clusters,
                               n_init=n_init,
                               metric='dtw',
                               max_iter_barycenter=max_iter_barycenter,
@@ -43,27 +54,27 @@ for n_cluster in n_clusters:
     sil_coef.append(silhouette_score(X_train, y_pred))
     inertia.append(dba_km.inertia_)
 
-    plt.figure()
-    for yi in range(n_cluster):
-        plt.subplot(1, n_cluster, yi + 1)
-        for xx in X_train[y_pred == yi]:
-            plt.plot(xx.ravel(), "k-", alpha=.2)
-        plt.plot(dba_km.cluster_centers_[yi].ravel(), "r-")
-        plt.xlim(0, sz)
+    #  plt.figure()
+    #  for yi in range(n_cluster):
+        #  plt.subplot(1, n_cluster, yi + 1)
+        #  for xx in X_train[y_pred == yi]:
+            #  plt.plot(xx.ravel(), "k-", alpha=.2)
+        #  plt.plot(dba_km.cluster_centers_[yi].ravel(), "r-")
+        #  plt.xlim(0, sz)
         #  plt.ylim(0, 4)
-        plt.text(0.25, .95,'Cluster %d' % (yi + 1),
-                 transform=plt.gca().transAxes)
-        if yi==2:
-            plt.title(f'DTW on Scaled Yearly Data with n_clusters={n_cluster}')
-    plt.savefig(f'{n_cluster}_clusters_DTW_scaled_r1.png')
+        #  plt.text(0.25, .95,'Cluster %d' % (yi + 1),
+                 #  transform=plt.gca().transAxes)
+        #  if yi==2:
+            #  plt.title(f'DTW on Scaled Yearly Data with n_clusters={n_cluster}')
+    #  plt.savefig(f'{n_cluster}_clusters_DTW_scaled_r1.png')
     df = pd.DataFrame(list(zip(list(use_df.columns), dba_km.labels_)),
                       columns=['User', 'DBA cluster'])
-    df.to_csv(f'{n_cluster}_DTW_results_scaled_r{cluster_window}.csv')
+    df.to_csv(f'5_clusters_DTW_results_scaled_{season}.csv')
+    df2 = pd.DataFrame(list(zip(sil_coef, inertia)),
+                   columns=['Silhouette coef', 'Intertia'])
+    df2.to_csv(f'5_clusters_silhouette_score_{season}.csv')
 
-    end = time.perf_counter()
-    total = (end - begin) / 60
-    print(f'Clustering took {total} minutes to run')
-#  df2 = pd.DataFrame(list(zip(sil_coef, inertia)),
-                   #  columns=['Silhouette coef', 'Intertia'])
-#  df2.to_csv(f'silhouette_score_r{cluster_window}.csv')
+end = time.perf_counter()
+total = (end - begin) / 60
+print(f'Clustering took {total} minutes to run')
 
