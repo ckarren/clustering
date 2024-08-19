@@ -1,4 +1,5 @@
 import glob
+from sklearn.preprocessing import normalize
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
@@ -10,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from mpl_toolkits.axes_grid1.axes_divider import HBoxDivider, VBoxDivider
 import mpl_toolkits.axes_grid1.axes_size as Size
+import matplotlib.ticker as ticker
 import pandas as pd 
 import os
 
@@ -149,7 +151,7 @@ def clean_outliers_sd(df):
     df = df[df.columns[b]]
     return df
 
-def clean_outliers(df, lb=1.0, ub=400.0, ll=-10.0):
+def clean_outliers(df, lb=1.0, ub=100.0, ll=-10.0):
     df = df[df.columns[~((df < lb).all(axis=0))]]
     df = df[df.columns[~((df > ub).any(axis=0))]]
     df = df[df.columns[~((df < ll).any(axis=0))]]
@@ -524,7 +526,79 @@ def cluster_hourly_heatmap():
     fig.colorbar(im2, ax=ax2, location='bottom', label='Volume (gallons)')
     plt.show()
 
-def cluster_hourly_heatmap_all(n_clusters, period='year'):
+def cluster_hourly_heatmap_ind(n_clusters, radius):
+    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
+    #  cluster_file = f'../RadiusComps/{n_clusters}_euclidean_results_dtw{radius}.csv'
+    df_cluster = pd.read_csv(cluster_file,
+                             usecols=[1,2],
+                            header=0,
+                            index_col=0
+                            )
+    cluster_cust = []
+    clusters = list(range(n_clusters))
+    for cluster in clusters:
+        df_cluster1 = df_cluster[df_cluster['DBA cluster'] == cluster]
+        cluster_cust.append(str(np.random.choice(df_cluster1.index.values)))
+
+    df_use1 = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl') 
+    df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
+    df_use = pd.concat([df_use1, df_use2], join='inner')
+    df_use = clean_outliers(df_use)
+
+    df_use = df_use.filter(cluster_cust)
+    clusters = list(range(n_clusters))
+    cluster_array = []
+    for col in df_use:
+        a = df_use[col].values.reshape((730,24))
+        a = normalize(a, norm='max')
+        cluster_array.append(a)
+    cluster_names = ['Dominant Late Night',
+                     'Pronounced Late Morning',
+                     'Dominant Early Morning',
+                     'Dominant Evening',
+                     'Dominant Morning']
+
+    fig, axs = plt.subplots(nrows=1, ncols=n_clusters)
+    aw = .2
+    ah = .8
+    margin = 0.05
+    #  if period == 'year':
+        #  df_use = groupby_year(df_use)
+    #  elif period == 'month':
+        #  df_use = groupby_month(df_use)
+    #  elif period == 'season':
+        #  df_use = groupby_season(df_use)
+
+
+    for c in clusters:
+        #  cluster = [str(x) for x in df_cluster[df_cluster['k-means cluster'] == c].index.to_list()]
+        #  cluster = [str(x) for x in df_cluster[df_cluster['DBA cluster'] == c].index.to_list()]
+        #  df_use_c =  normalized_use.filter(items=cluster)
+        #  df_use_c = df_use_c.T
+        im = axs[c].imshow(cluster_array[c], aspect='auto')
+        axs[c].tick_params(axis='x', labelsize=10)
+        axs[c].yaxis.set_ticklabels([])
+        axs[c].xaxis.set_major_locator(ticker.FixedLocator([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]))
+        axs[c].xaxis.set_ticklabels(['00:00','01:00', '02:00', '03:00', '04:00',
+                                     '05:00', '06:00', '07:00', '08:00',
+                                     '09:00', '10:00', '11:00', '12:00',
+                                     '01:00', '02:00', '03:00', '04:00',
+                                     '05:00', '06:00', '07:00', '08:00',
+                                     '09:00', '10:00', '11:00'],
+                                    rotation='vertical')
+        axs[c].annotate(f'{cluster_names[c]}',
+                        xy=(0.50, 1.03), xycoords='axes fraction',
+                        ha='center', va='top',
+                        fontsize=14
+                        )
+        if c == 4:
+            cbar = axs[c].figure.colorbar(im, ax=axs[c], location='right',
+                                          orientation='vertical')
+    plt.show()
+
+cluster_hourly_heatmap_ind(5,1)
+
+def cluster_hourly_heatmap_all(n_clusters, radius, period='year'):
     cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
     #  cluster_file = f'../RadiusComps/{n_clusters}_euclidean_results_dtw{radius}.csv'
     df_cluster = pd.read_csv(cluster_file,
@@ -535,75 +609,54 @@ def cluster_hourly_heatmap_all(n_clusters, period='year'):
     df_use1 = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl') 
     df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
     df_use = pd.concat([df_use1, df_use2], join='inner')
-    df_use1 = clean_outliers(df_use1)
-    df_use2 = clean_outliers(df_use2)
     df_use = clean_outliers(df_use)
-    df_use = df_use.multiply(7.48).round(2)
 
     clusters = list(range(n_clusters))
+    cluster_names = ['Dominant Late Night',
+                     'Pronounced Late Morning',
+                     'Dominant Early Morning',
+                     'Dominant Evening',
+                     'Dominant Morning']
+
     fig, axs = plt.subplots(nrows=1, ncols=n_clusters)
+    aw = .2
+    ah = .8
+    margin = 0.05
 
     if period == 'year':
         df_use = groupby_year(df_use)
-        for ax in axs:
-            ax.set_xlim([0,23])
-            #  ax.set_ylim([0,45.0])
     elif period == 'month':
         df_use = groupby_month(df_use)
-        for ax in axs:
-            ax.set_xlim([0,287])
-            #  ax.set_ylim([0,45.0])
     elif period == 'season':
         df_use = groupby_season(df_use)
-        for ax in axs:
-            ax.set_xlim([0,95])
+
+    normalized_use = df_use / df_use.max() 
 
     for c in clusters:
+        #  cluster = [str(x) for x in df_cluster[df_cluster['k-means cluster'] == c].index.to_list()]
         cluster = [str(x) for x in df_cluster[df_cluster['DBA cluster'] == c].index.to_list()]
-        df_use_c =  df_use.filter(items=cluster)
-        #  total = df_use_c.sum(axis=1)
-        #  average = df_use_c.mean(axis=1)
-        #  for i in df_use_c.columns:
-            #  i = str(i)
-        axs[c].imshow(df_use_c.index, df_use_c.columns)
-        axs[c].plot(df_use_c.index, average, "o-", c=cluster_colors[c], linewidth=3)
-        axs[c].tick_params(axis='x', labelsize=14)
-        axs[c].tick_params(axis='y', labelsize=14)
-        axs[c].annotate(f'{cluster_names[c]}', 
-                        xy=(0.95, 0.95), xycoords='axes fraction', 
-                        ha='right', va='top', 
+        df_use_c =  normalized_use.filter(items=cluster)
+        df_use_c = df_use_c.T
+        im = axs[c].imshow(df_use_c, aspect='auto')
+        axs[c].tick_params(axis='x', labelsize=10)
+        axs[c].yaxis.set_ticklabels([])
+        axs[c].xaxis.set_major_locator(ticker.FixedLocator([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]))
+        axs[c].xaxis.set_ticklabels(['00:00','01:00', '02:00', '03:00', '04:00',
+                                     '05:00', '06:00', '07:00', '08:00',
+                                     '09:00', '10:00', '11:00', '12:00',
+                                     '01:00', '02:00', '03:00', '04:00',
+                                     '05:00', '06:00', '07:00', '08:00',
+                                     '09:00', '10:00', '11:00'],
+                                    rotation='vertical')
+        axs[c].annotate(f'{cluster_names[c]}',
+                        xy=(0.50, 1.03), xycoords='axes fraction',
+                        ha='center', va='top',
                         fontsize=14
                         )
-    fig.supxlabel('Time (hr)', fontsize=fontsize)
-    fig.supylabel('Volume (gallons)', fontsize=fontsize)
+        if c == 4:
+            cbar = axs[c].figure.colorbar(im, ax=axs[c], location='right',
+                                          orientation='vertical')
     plt.show()
-
-    #  ax2.pcolormesh(clusters)
-    im1 = ax1.imshow(clusters, 
-                     vmin=minmin,
-                     vmax=maxmax)
-    #  ax2.xaxis.set_ticklabels([])
-    #  ax2.yaxis.set_ticklabels(['1', '2', '3', '4', '5'])
-    ax1.set_yticks(np.arange(len(df.index)-1), ['1', '2', '3', '4', '5'])
-    ax1.set_ylabel('Cluster')
-    #  ax1.pcolormesh(total)
-    im2 = ax2.imshow()
-    ax2.yaxis.set_ticklabels([])
-    ax2.set_xlabel('Time (hr)')
-    ax2.set_ylabel('Total')
-    pad = 0.3
-
-    #  divider = VBoxDivider(
-        #  fig, 111,
-        #  horizontal=[Size.AxesX(ax1), Size.Scaled(1), Size.AxesX(ax2)],
-        #  vertical=[Size.AxesY(ax1), Size.Fixed(pad), Size.AxesY(ax2)])
-#
-    #  ax1.set_axes_locator(divider.new_locator(0))
-    #  ax2.set_axes_locator(divider.new_locator(2))
-    #  fig.colorbar(im1, ax=ax1, location='bottom', label='Volume (gallons)')
-    fig.colorbar(im2, ax=ax2, location='bottom', label='Volume (gallons)')
-    plt.show()
-
 
 def cluster_summary(n_clusters, radius, **kwargs): 
     """ 
