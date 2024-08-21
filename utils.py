@@ -377,75 +377,187 @@ def groupby_season(df):
     spring_wd = weekdays.loc[weekdays.index.month.isin(spring)].copy()
     #  spring_we = weekends.loc[weekends.index.month.isin(spring)]
     autumn_wd = weekdays.loc[weekdays.index.month.isin(autumn)].copy()  
-#
-            #  3: 0,
-            #  4: 3,
-            #  5: 5
-        #  },
-        #  'r3': {
-            #  0: 3,
-            #  1: 2,
-            #  2: 0,
-            #  3: 1,
-            #  4: 4,
-            #  5: 5
-        #  }
-    #  }
-    #  cluster_7 = {
-        #  'r1': {
-            #  0: 3,
-            #  1: 2,
-            #  2: 0,
-            #  3: 1,
-            #  4: 4,
-            #  5: 5,
-            #  6: 6
-        #  },
-        #  'r2': {
-            #  0: 4,
-            #  1: 2,
-            #  2: 1,
-            #  3: 0,
-            #  4: 3,
-            #  5: 5,
-            #  6: 6
-#
-        #  },
-        #  'r3': {
-            #  0: 3,
-            #  1: 2,
-            #  2: 0,
-            #  3: 1,
-            #  4: 4,
-            #  5: 5,
-            #  6: 6
-        #  }
-    #  }
-    #  rename_dicts = [cluster_4, cluster_5, cluster_6, cluster_7]
-    #  li = []
-    #  all_files = glob.glob(str(f'../RadiusComps/{n_clusters}_DTW_results_scaled_r[1-5].csv'))
-    #  for filename in all_files:
-        #  df = pd.read_csv(
-            #  filename,
-            #  usecols=[1,2],
-            #  header=0,
-            #  index_col=0,
-        #  )
-        #  li.append(df)
-#
-    #  df = pd.concat(li, axis=1, ignore_index=True, verify_integrity=True)
-    #  df.rename(columns={
-        #  0: 'r1',
-        #  1: 'r2',
-        #  2: 'r3',
-        #  3: 'r4',
-        #  4: 'r5'
-    #  }, inplace=True)
-    #  df.set_index('User', inplace=True)
-    #  for i, column in enumerate(df):
-        #  df[column] = df[column].map(rename_dicts[n_clusters-4][str(column)])
-    #  return df
-#
+    #  autumn_we = weekends.loc[weekends.index.month.isin(spring)]
+    winter_wd = weekdays.loc[weekdays.index.month.isin(autumn)].copy()  
+    #  winter_we = weekends.loc[weekends.index.month.isin(spring)]
+
+    summer_wd_avg = summer_wd.groupby(summer_wd.index.hour).mean()
+    #  summer_we_avg = summer_we.groupby(summer_we.index.hour).mean()
+    spring_wd_avg = spring_wd.groupby(spring_wd.index.hour).mean()
+    #  spring_we_avg = spring_we.groupby(spring_we.index.hour).mean()
+    autumn_wd_avg = autumn_wd.groupby(autumn_wd.index.hour).mean()
+    #  autumn_we_avg = autumn_we.groupby(autumn_we.index.hour).mean()
+    winter_wd_avg = winter_wd.groupby(winter_wd.index.hour).mean()
+    #  winter_we_avg = winter_we.groupby(winter_we.index.hour).mean()
+    by_season_wd = pd.concat([summer_wd_avg, 
+                              autumn_wd_avg, 
+                              winter_wd_avg,
+                              spring_wd_avg])
+    #  by_season_we = pd.concat([summer_we_avg,
+                              #  autumn_we_avg,
+                              #  winter_we_avg,
+                              #  spring_we_avg])
+
+    by_season_wd.reset_index(drop=True, inplace=True)
+    #  by_season_we.reset_index(drop=True, inplace=True)
+
+    return by_season_wd#, by_season_we
+
+def analyse_dtw(n_clusters, n_radius):
+    """ Returns the number of members in each cluster, for radii n_radius
+    n_clusters (int): 
+    n_radius (list): the radii used
+    """
+    cluster_4 = {
+        'r1': {
+            0: 0,
+            1: 1,
+            2: 2,
+            3: 3
+            },
+        'r2': {
+            0: 0,
+            1: 2,
+            2: 3,
+            3: 1
+            },
+        'r3': {
+            0: 0,
+            1: 1,
+            2: 3,
+            3: 2
+        },
+        'r4': {
+            0:0,
+            1:2,
+            2:3,
+            3:1
+        },
+        'r5': {
+            0: 1,
+            1: 2,
+            2: 0,
+            3: 3
+        }
+    }
+    cluster_5 = {
+        'r1': {
+            0: 3,
+            1: 2,
+            2: 0,
+            3: 1,
+            4: 4
+        },
+        'r2': {
+            0: 4,
+            1: 2,
+            2: 1,
+            3: 0,
+            4: 3
+        },
+        'r3': {
+            0: 3,
+            1: 2,
+            2: 0,
+            3: 1,
+            4: 4
+        },
+        'r4': {
+            0: 0,
+            1: 2,
+            2: 3,
+            3: 1,
+            4: 4
+        },
+        'r5': {
+            0: 4,
+            1: 1,
+            2: 2,
+            3: 0,
+            4: 3
+        }
+    }
+    cluster_6 = {
+        'r1': {
+            0: 3,
+            1: 2,
+            2: 0,
+            3: 1,
+            4: 4,
+            5: 5
+        },
+        'r2': {
+            0: 4,
+            1: 2,
+            2: 1,
+            3: 0,
+            4: 3,
+            5: 5
+        },
+        'r3': {
+            0: 3,
+            1: 2,
+            2: 0,
+            3: 1,
+            4: 4,
+            5: 5
+        }
+    }
+    cluster_7 = {
+        'r1': {
+            0: 3,
+            1: 2,
+            2: 0,
+            3: 1,
+            4: 4,
+            5: 5,
+            6: 6
+        },
+        'r2': {
+            0: 4,
+            1: 2,
+            2: 1,
+            3: 0,
+            4: 3,
+            5: 5,
+            6: 6
+
+        },
+        'r3': {
+            0: 3,
+            1: 2,
+            2: 0,
+            3: 1,
+            4: 4,
+            5: 5,
+            6: 6
+        }
+    }
+    rename_dicts = [cluster_4, cluster_5, cluster_6, cluster_7]
+    li = []
+    all_files = glob.glob(str(f'../RadiusComps/{n_clusters}_DTW_results_scaled_r[1-5].csv'))
+    for filename in all_files:
+        df = pd.read_csv(
+            filename,
+            usecols=[1,2],
+            header=0,
+            index_col=0,
+        )
+        li.append(df)
+
+    df = pd.concat(li, axis=1, ignore_index=True, verify_integrity=True)
+    df.rename(columns={
+        0: 'r1',
+        1: 'r2',
+        2: 'r3',
+        3: 'r4',
+        4: 'r5'
+    }, inplace=True)
+    df.set_index('User', inplace=True)
+    for i, column in enumerate(df):
+        df[column] = df[column].map(rename_dicts[n_clusters-4][str(column)])
+    return df
+
 def compare_radius_means(n_clusters, radii=['r1', 'r2', 'r3', 'r4', 'r5']):
     """ 
     produces plots to compare the means of clusters using the DTW algorithm with
@@ -742,6 +854,46 @@ def plot_inertia():
     ax.tick_params(labelsize=14)
     plt.show()
 
+def rename_seasonal_cluster():
+    data = pd.read_csv('5_clusters_by_season.csv', index_col=0)
+    df = pd.DataFrame(data)
+    rename_clusters = {
+        'summer Cluster': {
+            0: 1,
+            1: 4,
+            2: 2,
+            3: 0,
+            4: 3
+        },
+        'autumn Cluster': {
+            0: 4,
+            1: 3, 
+            2: 1,
+            3: 2,
+            4: 0
+        },
+        'winter Cluster': {
+            0: 0,
+            1: 2,
+            2: 3,
+            3: 1,
+            4: 4
+        },
+        'spring Cluster': {
+            0: 0,
+            1: 1,
+            2: 3,
+            3: 4,
+            4: 2
+        }
+    }
+
+    for column in df:
+        df[column] = df[column].map(rename_clusters[column])
+
+    df.to_csv('rename_clusters_by_season.csv')
+    return df
+
 def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs): 
     """ 
     produces plots to compare the means of clusters using the DTW algorithm with
@@ -750,7 +902,7 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
     radii (list): list of radii to compare
     """
 
-    cluster_file = '5_clusters_by_season.csv'
+    cluster_file = 'rename_clusters_by_season.csv'
     #  cluster_file = f'../RadiusComps/{n_clusters}_euclidean_results_dtw{radius}.csv'
     df_cluster = pd.read_csv(cluster_file,
                             header=0,
@@ -767,7 +919,7 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
     if vertical:
         nrows = n_clusters
         ncols = 1
-        figsize = (8, 40)
+        figsize = (6, 40)
         sharex = True
         sharey = False
     else:
@@ -776,33 +928,59 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
         figsize = (48, 12)
         sharex = False
         sharey = True
+
+    df_use = groupby_season(df_use)
+
     fig, axs = plt.subplots(nrows=nrows,
                             ncols=ncols,
                             figsize=figsize, 
                             sharex=sharex,
                             sharey=sharey,
                             layout='constrained')
-    if kwargs['period']:
-        if kwargs['period'] == 'year':
-            df_use = groupby_year(df_use)
-            for ax in axs:
-                ax.set_xlim([0,23])
+    #  if kwargs['period']:
+        #  if kwargs['period'] == 'year':
+            #  df_use = groupby_year(df_use)
+            #  for ax in axs:
+                #  ax.set_xlim([0,23])
                 #  ax.set_ylim([0,45.0])
-        elif kwargs['period'] == 'month':
-            df_use = groupby_month(df_use)
-            for ax in axs:
-                ax.set_xlim([0,287])
+        #  elif kwargs['period'] == 'month':
+            #  df_use = groupby_month(df_use)
+            #  for ax in axs:
+                #  ax.set_xlim([0,287])
                 #  ax.set_ylim([0,45.0])
-        elif kwargs['period'] == 'season':
-            df_use = groupby_season(df_use)
-            for ax in axs:
-                ax.set_xlim([0,95])
+        #  elif kwargs['period'] == 'season':
+            #  df_use = groupby_season(df_use)
+            #  for ax in axs:
+                #  ax.set_xlim([0,95])
+                #  ax.set_ylim([0,45.0])
 
     if kwargs['season']:
         season = kwargs['season']
-                #  ax.set_ylim([0,45.0])
-    #  else:
-        #  print('keyword period must be one of "year", "month", or "season".')
+        #  if season == 'summer':
+        #  for ax in axs:
+            #  ax.set_ylim([0,45.0])
+            #  ax.set_xlim([0,23])
+        #  elif season == 'autumn':
+            #  for ax in axs:
+                #  ax.set_ylim([0,35.0])
+        #  elif season == 'winter':
+            #  for ax in axs:
+                #  ax.set_ylim([0,35.0])
+        #  elif season == 'spring':
+            #  for ax in axs:
+                #  ax.set_ylim([0,35.0])
+        if season == 'summer':
+            df_use = df_use.iloc[0:24,:]
+        elif season == 'autumn':
+            df_use = df_use.iloc[24:48,:]
+            df_use.reset_index(drop=True, inplace=True)
+        elif season == 'winter':
+            df_use = df_use.iloc[48:72,:]
+            df_use.reset_index(drop=True, inplace=True)
+        elif season == 'spring':
+            df_use = df_use.iloc[72:97,:]
+            df_use.reset_index(drop=True, inplace=True)
+
     df_cluster.filter(items = [f'{season} Cluster'])
     clusters = list(range(n_clusters))
     fontsize = 16
@@ -822,6 +1000,8 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
         #  for i in df_use_c.columns:
             #  i = str(i)
         #  axs[c].plot(df_use_c.index, df_use_c.iloc[:,278], c='grey')
+        axs[c].set_xlim([0,23])
+        axs[c].set_ylim([0,55])
         axs[c].plot(df_use_c.index, average, "o-", c=cluster_colors[c], linewidth=3)
         axs[c].tick_params(axis='x', labelsize=14)
         axs[c].tick_params(axis='y', labelsize=14)
@@ -832,9 +1012,127 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
                         )
     fig.supxlabel('Time (hr)', fontsize=fontsize)
     fig.supylabel('Volume (gallons)', fontsize=fontsize)
+    fig.suptitle(f'{season}')
     plt.show()
+    #  fig.savefig(f'../5_clusters_output/5_clusters_average_{season}_2.png')
 
-cluster_summary_plots(5,1,vertial=True, period='year', season='spring')
+def combine_season_clusters():
+    year_clusters = pd.read_csv('../5_clusters_output/5_results_euclidean_dtw1.csv', 
+                                header=0, 
+                                usecols=[1,3], 
+                                index_col=0)
+    season_clusters = pd.read_csv('../5_clusters_output/rename_clusters_by_season.csv', 
+                                    header=0,
+                                    index_col=0)
+    df_year = pd.DataFrame(year_clusters)
+    df_season = pd.DataFrame(season_clusters)
+    df = pd.concat([df_year, df_season], axis=1, join='inner')
+    df.to_csv('../5_clusters_output/year_season_cluster.csv')
+
+def prep_sankay():
+    data = pd.read_csv('../5_clusters_output/year_season_cluster.csv', header=0,
+                       index_col=0)
+    df = pd.DataFrame(data)
+    for n in df.iloc[:,0].unique():
+        x0 = len(df[df.iloc[:,0] == n])
+        breakpoint()
+    #  x0 = df[:,0].value_counts()
+        #  for i in df[df[]]
+    #  for c, col in enumerate(df.columns):
+        #  x0 = df[col].value_counts()
+        #  for i in x0.index:
+            #  print(i)
+            #  breakpoint()
+        #  x1 = []
+        #  for i in range(5):
+            #  x1 = df[df[col] == i].iloc[:,c+1].value_counts()
+
+def plot_sankey():
+
+    fig = go.Figure(data=[go.Sankey(
+        node = dict(
+          pad = 15,
+          thickness = 20,
+          line = dict(color = "black", width = 0.5),
+          label = ["Annual 0", "Summer 0", "Autumn 0", "Winter 0", "Spring 0",
+                   "Annual 1", "Summer 1", "Autumn 1", "Winter 1", "Spring 1",
+                   "Annual 2", "Summer 2", "Autumn 2", "Winter 2", "Spring 2",
+                   "Annual 3", "Summer 3", "Autumn 3", "Winter 3", "Spring 3",
+                   "Annual 4", "Summer 4", "Autumn 4", "Winter 4", "Spring 4",
+                   ],
+          color = "blue"
+        ),
+        link = dict(
+          source = [0, 0, 0, 0, 0, 
+                    5, 5, 5, 5, 5, 
+                    10, 10, 10, 10, 10, 
+                    15, 15, 15, 15, 15, 
+                    20, 20, 20, 20, 20, 
+                    1, 1, 1, 1, 1, 
+                    6, 6, 6, 6, 6, 
+                    11, 11, 11, 11, 11, 
+                    16, 16, 16, 16, 16, 
+                    21, 21, 21, 21, 21, 
+                    2, 2, 2, 2, 2, 
+                    7, 7, 7, 7, 7, 
+                    12, 12, 12, 12, 12, 
+                    17, 17, 17, 17, 17, 
+                    22, 22, 22, 22, 22, 
+                    3, 3, 3, 3, 3, 
+                    8, 8, 8, 8, 8, 
+                    13, 13, 13, 13, 13, 
+                    18, 18, 18, 18, 18, 
+                    23, 23, 23, 23, 23, 
+                    4, 4, 4, 4, 4, 
+                    9, 9, 9, 9, 9, 
+                    14, 14, 14, 14, 14, 
+                    19, 19, 19, 19, 19, 
+                    24, 24, 24, 24, 24],
+          target = [1, 6, 11, 16, 21, 
+                    1, 6, 11, 16, 21,
+                    1, 6, 11, 16, 21,
+                    1, 6, 11, 16, 21,
+                    1, 6, 11, 16, 21,
+                    2, 7, 12, 17, 22, 
+                    2, 7, 12, 17, 22, 
+                    2, 7, 12, 17, 22, 
+                    2, 7, 12, 17, 22, 
+                    2, 7, 12, 17, 22, 
+                    3, 8, 13, 18, 23,
+                    3, 8, 13, 18, 23,
+                    3, 8, 13, 18, 23,
+                    3, 8, 13, 18, 23,
+                    3, 8, 13, 18, 23,
+                    4, 9, 14, 19, 24, 
+                    4, 9, 14, 19, 24, 
+                    4, 9, 14, 19, 24, 
+                    4, 9, 14, 19, 24, 
+                    4, 9, 14, 19, 24],
+          #  value = [106, 2124, 40, 518, 1273,
+                   #  78, 151, 998, 390, 3180,
+                   #  502, 34, 805, 48, 57,
+                   #  1308, 184, 42, 2523, 213,
+                   #  114, 34, 805, 48, 57,
+                   #  48, 395, 203, 141, 3274, 221, 110, 4054, 169, 234, 1275, 49,
+                   #  53, 44, 25, 155, 491, 206, 3227, 191, 62, 49, 53, 44, 25, 60,
+                   #  1298, 340, 262, 2101, 621, 353, 2810, 322, 691, 794, 149, 88,
+                   #  320, 95, 66, 442, 420, 2811, 531, 55, 149, 88, 320, 95, 55,
+                   #  2530, 208, 304, 964, 143, 281, 1919, 246, 2208, 1039, 118,
+                   #  109, 111, 69, 252, 295, 464, 3095, 164, 66, 118, 109, 11, 69]
+            #  value = [106,2124,40,518,1273,78,151,998,390,3180,502,34,805,48,57,1308,184,42,2523,213,114,1760,29,1860,84,
+                    #  561,171,90,1154,132,561,171,90,1154,132,561,171,90,1154,132,561,171,90,1154,132,561,171,90,1154,132,
+                    #  835,200,158,427,141,835,200,158,427,141,835,200,158,427,141,835,200,158,427,141,835,200,158,427,141,
+                    #  693,121,539,113,130,693,121,539,113,130,693,121,539,113,130,693,121,539,113,130,693,121,539,113,130]
+          value = [106,2124,40,518,1273,78,151,998,390,3180,502,34,805,48,57,1308,184,42,2523,213,114,1760,29,1860,84,
+                    561,171,90,1154,132,85,1728,211,301,1928,873,66,856,62,57,105,2025,471,2056,682,137,156,2975,256,1283,
+                    835,200,158,427,141,74,2458,247,779,588,552,372,2592,372,715,72,437,397,2424,499,63,1274,423,360,1962,
+                    693,121,539,113,130,165,3120,235,1010,211,123,232,1273,320,1869,471,438,313,2947,193,103,1594,537,626,1045,]
+
+      ))])
+
+    fig.update_layout(title_text="Basic Sankey Diagram", font_size=10)
+    fig.show()   
+plot_sankey()
 def lot_cluster_hist(n_clusters):
     cluster_names = ['Dominant Late Night',
                      'Pronounced Late Morning',

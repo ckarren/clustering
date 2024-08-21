@@ -40,14 +40,14 @@ for season in seasons:
 df_all = pd.concat(clusters, axis=1, join='inner')
 df_all.to_csv('5_clusters_by_season.csv')
 #      X1_train = ut.groupby_season(use_df)
-#      if season == 'summer':
-#          X1_train = X1_train.iloc[0:24,:]
-#      elif season == 'autumn':
-#          X1_train = X1_train.iloc[24:48,:]
-#      elif season == 'winter':
-#          X1_train = X1_train.iloc[48:72,:]
-#      elif season == 'spring':
-#          X1_train = X1_train.iloc[72:97,:]
+    #      if season == 'summer':
+    #          X1_train = X1_train.iloc[0:24,:]
+    #      elif season == 'autumn':
+    #          X1_train = X1_train.iloc[24:48,:]
+    #      elif season == 'winter':
+    #          X1_train = X1_train.iloc[48:72,:]
+    #      elif season == 'spring':
+    #          X1_train = X1_train.iloc[72:97,:]
 #
 #      X1_train = X1_train.T
 #      X_train = to_time_series_dataset(X1_train)
