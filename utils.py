@@ -151,7 +151,7 @@ def clean_outliers_sd(df):
     df = df[df.columns[b]]
     return df
 
-def clean_outliers(df, lb=1.0, ub=100.0, ll=-10.0):
+def clean_outliers(df, lb=1.0, ub=100.0, ll=-1.0):
     df = df[df.columns[~((df < lb).all(axis=0))]]
     df = df[df.columns[~((df > ub).any(axis=0))]]
     df = df[df.columns[~((df < ll).any(axis=0))]]
@@ -596,7 +596,6 @@ def cluster_hourly_heatmap_ind(n_clusters, radius):
                                           orientation='vertical')
     plt.show()
 
-cluster_hourly_heatmap_ind(5,1)
 
 def cluster_hourly_heatmap_all(n_clusters, radius, period='year'):
     cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
