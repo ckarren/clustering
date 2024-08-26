@@ -242,6 +242,121 @@ def groupby_year(df, op='mean'):
         annual_wd = weekdays.groupby(weekdays.index.hour).sum()
         annual_we = weekends.groupby(weekends.index.hour).sum()
 
+    filtered_data = mdf[(mdf[filter_type] == filter_value)]
+    return filtered_data
+
+def miu_range_filter(miu_dataframe, filter_type1, fil_val1_lo, fil_val1_hi):
+    mdf = miu_dataframe.copy()
+    filtered_data = mdf.loc[(mdf[filter_type1] > fil_val1_lo) & (mdf[filter_type1] < fil_val1_hi), 'MiuId'].to_list()
+    data_list = [str(x) for x in filtered_data]
+    return data_list
+
+def combine_filters(fd1, fd2):
+    c = [str(value) for value in fd1 if value in fd2]
+    return c
+
+def clean_outliers_sd(df):
+    df = df[df.columns[(np.abs(stats.zscore(df, axis=1)) < 3).all(axis=0)]]
+    a = df.max(axis=None)
+    a = (np.abs(stats.zscore(df, axis=1)) < 3).all(axis=0)
+    df = df.iloc[:,0:8]
+    a = stats.zscore(df, axis=1)
+    a.iloc[1,2] = 5
+    b = (np.abs(a) < 3).all(axis=0)
+    df = df[df.columns[b]]
+    return df
+
+def clean_outliers(df, lb=1.0, ub=100.0, ll=-10.0):
+    df = df[df.columns[~((df < lb).all(axis=0))]]
+    df = df[df.columns[~((df > ub).any(axis=0))]]
+    df = df[df.columns[~((df < ll).any(axis=0))]]
+    return df
+
+def summary(df):
+    a = stats.describe(df, axis=0)
+    return a
+
+def q1(dfx):
+    return dfx.quantile(0.25)
+
+def q2(dfx):
+    return dfx.quantile(0.5)
+
+def q3(dfx):
+    return dfx.quantile(0.75)
+
+def quant(dfx, col, qn):
+    new_col = 'Q' + str(col)
+    dfx[new_col] = pd.qcut(dfx[col], qn, labels = False, duplicates = 'drop') 
+    return dfx
+
+def weekends(dfx):
+    we = []
+    for i in dfx.index:
+        if i.dayofweek == 5:
+            we.append(i.date())
+    else:
+        pass
+    we = unique(we)
+    we = [datetime.combine(x, time()) for x in we]
+    wel = [x+timedelta(hours=47) for x in we]
+    return we, wel
+
+def add_time(n):
+    n.index = pd.to_datetime(n.index)
+    for i in n.index:
+        s = n.xs(i)
+        ni = i + timedelta(hours=23, minutes=59)
+        n.loc[ni] = s
+    n.sort_index(inplace=True)
+    return n
+
+def weekdays(dfx):
+    return dfx[dfx.index.dayofweek < 5] 
+
+def annotate_axes(ax, text, fontsize=18):
+    ax.text(0.5, 0.5, text, transform-ax.transAxes,
+            ha='center', va='center', fontsize=fontsize, color='black')
+
+# for clustering:
+def pickle_feature(input_path, output_path):
+    for i in range(1,7):
+        for j in range(1,3):
+            file = f'hourly_use_SFR_y{j}_p{i}.pkl'
+            df = pd.read_pickle(input_path + file)
+            week_df = df.groupby([df.index.weekday, df.index.hour]).mean()
+            print(f'Writing PDH_SFR_Y{j}P{i}.pkl file')
+            week_df.to_pickle(output_path + f'PDH_SFR_Y{j}P{i}.pkl')
+
+def split_week(df):
+    weekdays = df.loc[df.index.weekday.isin([0,1,2,3,4])]
+    weekends = df.loc[df.index.weekday.isin([5,6])]
+    return weekdays, weekends
+
+def groupby_month(df):
+    weekdays, weekends = split_week(df)
+  
+    monthly_wd = weekdays.groupby([weekdays.index.month, 
+                                   weekdays.index.hour]).mean()
+    #  monthly_we = weekends.groupby([weekends.index.month,
+                                   #  weekends.index.hour]).mean()
+    #  monthly_we.index = monthly_we.index.map('Month: {0[0]} Hour: {0[1]}'.format)
+ 
+    monthly_wd.reset_index(drop=True, inplace=True)
+    #  monthly_we.reset_index(drop=True, inplace=True)
+
+    return monthly_wd#, monthly_we
+
+def groupby_year(df, op='mean'):
+    weekdays, weekends = split_week(df)
+
+    if op == 'mean':
+        annual_wd = weekdays.groupby(weekdays.index.hour).mean()
+        annual_we = weekends.groupby(weekends.index.hour).mean()
+    elif op == 'total':
+        annual_wd = weekdays.groupby(weekdays.index.hour).sum()
+        annual_we = weekends.groupby(weekends.index.hour).sum()
+
 
     annual_wd.reset_index(drop=True, inplace=True)
     annual_we.reset_index(drop=True, inplace=True)
@@ -262,9 +377,9 @@ def groupby_season(df):
     spring_wd = weekdays.loc[weekdays.index.month.isin(spring)].copy()
     #  spring_we = weekends.loc[weekends.index.month.isin(spring)]
     autumn_wd = weekdays.loc[weekdays.index.month.isin(autumn)].copy()  
-    #  autumn_we = weekends.loc[weekends.index.month.isin(autumn)]
-    winter_wd = weekdays.loc[weekdays.index.month.isin(winter)].copy()  
-    #  winter_we = weekends.loc[weekends.index.month.isin(winter)]
+    #  autumn_we = weekends.loc[weekends.index.month.isin(spring)]
+    winter_wd = weekdays.loc[weekdays.index.month.isin(autumn)].copy()  
+    #  winter_we = weekends.loc[weekends.index.month.isin(spring)]
 
     summer_wd_avg = summer_wd.groupby(summer_wd.index.hour).mean()
     #  summer_we_avg = summer_we.groupby(summer_we.index.hour).mean()
@@ -274,7 +389,6 @@ def groupby_season(df):
     #  autumn_we_avg = autumn_we.groupby(autumn_we.index.hour).mean()
     winter_wd_avg = winter_wd.groupby(winter_wd.index.hour).mean()
     #  winter_we_avg = winter_we.groupby(winter_we.index.hour).mean()
-
     by_season_wd = pd.concat([summer_wd_avg, 
                               autumn_wd_avg, 
                               winter_wd_avg,
@@ -318,7 +432,6 @@ def analyse_dtw(n_clusters, n_radius):
             1:2,
             2:3,
             3:1
-
         },
         'r5': {
             0: 1,
@@ -418,7 +531,7 @@ def analyse_dtw(n_clusters, n_radius):
             4: 4,
             5: 5,
             6: 6
-        }    
+        }
     }
     rename_dicts = [cluster_4, cluster_5, cluster_6, cluster_7]
     li = []
@@ -432,12 +545,12 @@ def analyse_dtw(n_clusters, n_radius):
         )
         li.append(df)
 
-    df = pd.concat(li, axis=1, ignore_index=True, verify_integrity=True) 
+    df = pd.concat(li, axis=1, ignore_index=True, verify_integrity=True)
     df.rename(columns={
         0: 'r1',
         1: 'r2',
         2: 'r3',
-        3: 'r4', 
+        3: 'r4',
         4: 'r5'
     }, inplace=True)
     df.set_index('User', inplace=True)
@@ -596,7 +709,6 @@ def cluster_hourly_heatmap_ind(n_clusters, radius):
                                           orientation='vertical')
     plt.show()
 
-
 def cluster_hourly_heatmap_all(n_clusters, radius, period='year'):
     cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
     #  cluster_file = f'../RadiusComps/{n_clusters}_euclidean_results_dtw{radius}.csv'
@@ -742,6 +854,46 @@ def plot_inertia():
     ax.tick_params(labelsize=14)
     plt.show()
 
+def rename_seasonal_cluster():
+    data = pd.read_csv('5_clusters_by_season.csv', index_col=0)
+    df = pd.DataFrame(data)
+    rename_clusters = {
+        'summer Cluster': {
+            0: 1,
+            1: 4,
+            2: 2,
+            3: 0,
+            4: 3
+        },
+        'autumn Cluster': {
+            0: 4,
+            1: 3, 
+            2: 1,
+            3: 2,
+            4: 0
+        },
+        'winter Cluster': {
+            0: 0,
+            1: 2,
+            2: 3,
+            3: 1,
+            4: 4
+        },
+        'spring Cluster': {
+            0: 0,
+            1: 1,
+            2: 3,
+            3: 4,
+            4: 2
+        }
+    }
+
+    for column in df:
+        df[column] = df[column].map(rename_clusters[column])
+
+    df.to_csv('rename_clusters_by_season.csv')
+    return df
+
 def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs): 
     """ 
     produces plots to compare the means of clusters using the DTW algorithm with
@@ -750,10 +902,9 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
     radii (list): list of radii to compare
     """
 
-    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
+    cluster_file = 'rename_clusters_by_season.csv'
     #  cluster_file = f'../RadiusComps/{n_clusters}_euclidean_results_dtw{radius}.csv'
     df_cluster = pd.read_csv(cluster_file,
-                             usecols=[1,2],
                             header=0,
                             index_col=0
                             )
@@ -768,7 +919,7 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
     if vertical:
         nrows = n_clusters
         ncols = 1
-        figsize = (8, 40)
+        figsize = (6, 40)
         sharex = True
         sharey = False
     else:
@@ -777,30 +928,60 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
         figsize = (48, 12)
         sharex = False
         sharey = True
+
+    df_use = groupby_season(df_use)
+
     fig, axs = plt.subplots(nrows=nrows,
                             ncols=ncols,
                             figsize=figsize, 
                             sharex=sharex,
                             sharey=sharey,
                             layout='constrained')
-    if kwargs:
-        if kwargs['period'] == 'year':
-            df_use = groupby_year(df_use)
-            for ax in axs:
-                ax.set_xlim([0,23])
+    #  if kwargs['period']:
+        #  if kwargs['period'] == 'year':
+            #  df_use = groupby_year(df_use)
+            #  for ax in axs:
+                #  ax.set_xlim([0,23])
                 #  ax.set_ylim([0,45.0])
-        elif kwargs['period'] == 'month':
-            df_use = groupby_month(df_use)
-            for ax in axs:
-                ax.set_xlim([0,287])
+        #  elif kwargs['period'] == 'month':
+            #  df_use = groupby_month(df_use)
+            #  for ax in axs:
+                #  ax.set_xlim([0,287])
                 #  ax.set_ylim([0,45.0])
-        elif kwargs['period'] == 'season':
-            df_use = groupby_season(df_use)
-            for ax in axs:
-                ax.set_xlim([0,95])
+        #  elif kwargs['period'] == 'season':
+            #  df_use = groupby_season(df_use)
+            #  for ax in axs:
+                #  ax.set_xlim([0,95])
                 #  ax.set_ylim([0,45.0])
-    #  else:
-        #  print('keyword period must be one of "year", "month", or "season".')
+
+    if kwargs['season']:
+        season = kwargs['season']
+        #  if season == 'summer':
+        #  for ax in axs:
+            #  ax.set_ylim([0,45.0])
+            #  ax.set_xlim([0,23])
+        #  elif season == 'autumn':
+            #  for ax in axs:
+                #  ax.set_ylim([0,35.0])
+        #  elif season == 'winter':
+            #  for ax in axs:
+                #  ax.set_ylim([0,35.0])
+        #  elif season == 'spring':
+            #  for ax in axs:
+                #  ax.set_ylim([0,35.0])
+        if season == 'summer':
+            df_use = df_use.iloc[0:24,:]
+        elif season == 'autumn':
+            df_use = df_use.iloc[24:48,:]
+            df_use.reset_index(drop=True, inplace=True)
+        elif season == 'winter':
+            df_use = df_use.iloc[48:72,:]
+            df_use.reset_index(drop=True, inplace=True)
+        elif season == 'spring':
+            df_use = df_use.iloc[72:97,:]
+            df_use.reset_index(drop=True, inplace=True)
+
+    df_cluster.filter(items = [f'{season} Cluster'])
     clusters = list(range(n_clusters))
     fontsize = 16
     #  colors =
@@ -811,13 +992,16 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
                      'Dominant Morning']
 
     for c in clusters:
-        cluster = [str(x) for x in df_cluster[df_cluster['DBA cluster'] == c].index.to_list()]
+        #  cluster = [str(x) for x in df_cluster[df_cluster['DBA cluster'] == c].index.to_list()]
+        cluster = [str(x) for x in df_cluster[df_cluster[f'{season} Cluster'] == c].index.to_list()]
         df_use_c =  df_use.filter(items=cluster)
         total = df_use_c.sum(axis=1)
         average = df_use_c.mean(axis=1)
         #  for i in df_use_c.columns:
             #  i = str(i)
         #  axs[c].plot(df_use_c.index, df_use_c.iloc[:,278], c='grey')
+        axs[c].set_xlim([0,23])
+        axs[c].set_ylim([0,55])
         axs[c].plot(df_use_c.index, average, "o-", c=cluster_colors[c], linewidth=3)
         axs[c].tick_params(axis='x', labelsize=14)
         axs[c].tick_params(axis='y', labelsize=14)
@@ -828,6 +1012,258 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
                         )
     fig.supxlabel('Time (hr)', fontsize=fontsize)
     fig.supylabel('Volume (gallons)', fontsize=fontsize)
+    fig.suptitle(f'{season}')
+    plt.show()
+    #  fig.savefig(f'../5_clusters_output/5_clusters_average_{season}_2.png')
+
+def combine_season_clusters():
+    year_clusters = pd.read_csv('../5_clusters_output/5_results_euclidean_dtw1.csv', 
+                                header=0, 
+                                usecols=[1,3], 
+                                index_col=0)
+    season_clusters = pd.read_csv('../5_clusters_output/rename_clusters_by_season.csv', 
+                                    header=0,
+                                    index_col=0)
+    df_year = pd.DataFrame(year_clusters)
+    df_season = pd.DataFrame(season_clusters)
+    df = pd.concat([df_year, df_season], axis=1, join='inner')
+    df.to_csv('../5_clusters_output/year_season_cluster.csv')
+
+def prep_sankay():
+    data = pd.read_csv('../5_clusters_output/year_season_cluster.csv', header=0,
+                       index_col=0)
+    df = pd.DataFrame(data)
+    for n in df.iloc[:,0].unique():
+        x0 = len(df[df.iloc[:,0] == n])
+        breakpoint()
+    #  x0 = df[:,0].value_counts()
+        #  for i in df[df[]]
+    #  for c, col in enumerate(df.columns):
+        #  x0 = df[col].value_counts()
+        #  for i in x0.index:
+            #  print(i)
+            #  breakpoint()
+        #  x1 = []
+        #  for i in range(5):
+            #  x1 = df[df[col] == i].iloc[:,c+1].value_counts()
+
+def plot_sankey():
+
+    fig = go.Figure(data=[go.Sankey(
+        node = dict(
+          pad = 15,
+          thickness = 20,
+          line = dict(color = "black", width = 0.5),
+          label = ["Annual 0", "Summer 0", "Autumn 0", "Winter 0", "Spring 0",
+                   "Annual 1", "Summer 1", "Autumn 1", "Winter 1", "Spring 1",
+                   "Annual 2", "Summer 2", "Autumn 2", "Winter 2", "Spring 2",
+                   "Annual 3", "Summer 3", "Autumn 3", "Winter 3", "Spring 3",
+                   "Annual 4", "Summer 4", "Autumn 4", "Winter 4", "Spring 4",
+                   ],
+          color = "blue"
+        ),
+        link = dict(
+          source = [0, 0, 0, 0, 0, 
+                    5, 5, 5, 5, 5, 
+                    10, 10, 10, 10, 10, 
+                    15, 15, 15, 15, 15, 
+                    20, 20, 20, 20, 20, 
+                    1, 1, 1, 1, 1, 
+                    6, 6, 6, 6, 6, 
+                    11, 11, 11, 11, 11, 
+                    16, 16, 16, 16, 16, 
+                    21, 21, 21, 21, 21, 
+                    2, 2, 2, 2, 2, 
+                    7, 7, 7, 7, 7, 
+                    12, 12, 12, 12, 12, 
+                    17, 17, 17, 17, 17, 
+                    22, 22, 22, 22, 22, 
+                    3, 3, 3, 3, 3, 
+                    8, 8, 8, 8, 8, 
+                    13, 13, 13, 13, 13, 
+                    18, 18, 18, 18, 18, 
+                    23, 23, 23, 23, 23, 
+                    4, 4, 4, 4, 4, 
+                    9, 9, 9, 9, 9, 
+                    14, 14, 14, 14, 14, 
+                    19, 19, 19, 19, 19, 
+                    24, 24, 24, 24, 24],
+          target = [1, 6, 11, 16, 21, 
+                    1, 6, 11, 16, 21,
+                    1, 6, 11, 16, 21,
+                    1, 6, 11, 16, 21,
+                    1, 6, 11, 16, 21,
+                    2, 7, 12, 17, 22, 
+                    2, 7, 12, 17, 22, 
+                    2, 7, 12, 17, 22, 
+                    2, 7, 12, 17, 22, 
+                    2, 7, 12, 17, 22, 
+                    3, 8, 13, 18, 23,
+                    3, 8, 13, 18, 23,
+                    3, 8, 13, 18, 23,
+                    3, 8, 13, 18, 23,
+                    3, 8, 13, 18, 23,
+                    4, 9, 14, 19, 24, 
+                    4, 9, 14, 19, 24, 
+                    4, 9, 14, 19, 24, 
+                    4, 9, 14, 19, 24, 
+                    4, 9, 14, 19, 24],
+          #  value = [106, 2124, 40, 518, 1273,
+                   #  78, 151, 998, 390, 3180,
+                   #  502, 34, 805, 48, 57,
+                   #  1308, 184, 42, 2523, 213,
+                   #  114, 34, 805, 48, 57,
+                   #  48, 395, 203, 141, 3274, 221, 110, 4054, 169, 234, 1275, 49,
+                   #  53, 44, 25, 155, 491, 206, 3227, 191, 62, 49, 53, 44, 25, 60,
+                   #  1298, 340, 262, 2101, 621, 353, 2810, 322, 691, 794, 149, 88,
+                   #  320, 95, 66, 442, 420, 2811, 531, 55, 149, 88, 320, 95, 55,
+                   #  2530, 208, 304, 964, 143, 281, 1919, 246, 2208, 1039, 118,
+                   #  109, 111, 69, 252, 295, 464, 3095, 164, 66, 118, 109, 11, 69]
+            #  value = [106,2124,40,518,1273,78,151,998,390,3180,502,34,805,48,57,1308,184,42,2523,213,114,1760,29,1860,84,
+                    #  561,171,90,1154,132,561,171,90,1154,132,561,171,90,1154,132,561,171,90,1154,132,561,171,90,1154,132,
+                    #  835,200,158,427,141,835,200,158,427,141,835,200,158,427,141,835,200,158,427,141,835,200,158,427,141,
+                    #  693,121,539,113,130,693,121,539,113,130,693,121,539,113,130,693,121,539,113,130,693,121,539,113,130]
+          value = [106,2124,40,518,1273,78,151,998,390,3180,502,34,805,48,57,1308,184,42,2523,213,114,1760,29,1860,84,
+                    561,171,90,1154,132,85,1728,211,301,1928,873,66,856,62,57,105,2025,471,2056,682,137,156,2975,256,1283,
+                    835,200,158,427,141,74,2458,247,779,588,552,372,2592,372,715,72,437,397,2424,499,63,1274,423,360,1962,
+                    693,121,539,113,130,165,3120,235,1010,211,123,232,1273,320,1869,471,438,313,2947,193,103,1594,537,626,1045,]
+
+      ))])
+
+    fig.update_layout(title_text="Basic Sankey Diagram", font_size=10)
+    fig.show()   
+
+def plot_boxplots(n_clusters):
+    cluster_names = ['DLN',
+                     'SMD',
+                     'DEM',
+                     'DE',
+                     'DM']
+    lot_df = pd.read_csv(f'../5_clusters_output/cluster_lot_info.csv')
+    lot_df['SQFTmain'] = lot_df['SQFTmain'].replace(0, np.NaN)
+    lot_df.dropna(subset=['SQFTmain'], inplace=True)
+    lot_df['EffectiveYearBuilt'] = 2018 - lot_df['EffectiveYearBuilt']
+    atts = ['EffectiveYearBuilt', 
+            'SQFTmain', 
+            'TotalValue']
+    att_labels = ['Home age', 
+                  'House size (ft^2)',
+                  'Home value ($)'
+                  ]
+    fig, axs = plt.subplots(1, len(atts), tight_layout=True)
+    for a, att in enumerate(atts):
+        att_list = []
+        for i in range(n_clusters):
+            cluster_lot = lot_df.loc[lot_df['DBA cluster'] == i]
+            att_list.append(cluster_lot[att])
+        bp = axs[a].boxplot(att_list, 
+                            labels=cluster_names, 
+                            showmeans=True,
+                            patch_artist=True,
+                            boxprops={'linewidth':2.0},
+                            whiskerprops={'linewidth':2.0},
+                            medianprops={'linewidth':1.5,
+                                         'color':'darkgray'},
+                            capprops={'linewidth':2.0},
+                                 )
+        for patch, color in zip(bp['boxes'], cluster_colors):
+            patch.set_facecolor(color)
+        axs[a].set_title(f'{att_labels[a]}')
+    plt.show()
+
+def cluster_lot(n_clusters, radius):
+    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
+    cluster_data = pd.read_csv(cluster_file, 
+                               usecols=[1,2], 
+                               index_col=0)
+    cluster_df = pd.DataFrame(cluster_data)
+    cluster_df.index = cluster_df.index.map(str)
+    census_df = pd.read_csv('../InputFiles/miu_census_tract_lot_2018.csv', 
+                            usecols=[2,8,27], 
+                            header=0)
+    census_df = census_df[census_df['PropertyType'] == 'SFR']
+    census_df.drop(columns=['PropertyType'], inplace=True)
+    census_df.rename(columns={'MiuId': 'User'}, inplace=True)
+    census_df.set_index('User', inplace=True)
+    lot_df = pd.read_pickle('../InputFiles/lot_SFR.pkl') 
+    lot_df.rename(columns={'MiuId': 'User'}, inplace=True)
+    lot_df.set_index('User', inplace=True)
+    lot_df.index = lot_df.index.map(str)
+    lot_df = lot_df.join(cluster_df, how='inner')
+    lot_df = lot_df.join(census_df, how='inner')
+    lot_df.to_csv(f'{n_clusters}_cluster_r{radius}_lot_census_tract.csv')
+    return lot_df
+
+def cluster_census():
+    file = pd.read_csv('../InputFiles/cluster_lot_census_tract.csv')
+    df = pd.DataFrame(file)
+    grouped = df.groupby(['TRACTCE', 'DBA cluster'])['DBA cluster'].count()
+    grouped.to_csv('../5_clusters_output/cluster_by_censustract.csv')
+
+def cluster_stacked_use(n_clusters, radius, period='year', operation='percent'):
+    clusters = list(range(n_clusters))
+    fontsize = 16
+
+    fig3, ax3 = plt.subplots()
+
+    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
+    cluster_data = pd.read_csv(cluster_file, 
+                               usecols=[1,2],
+                               index_col=0)
+    cluster_df = pd.DataFrame(cluster_data)
+    cluster_names = ['Dominant Late Night',
+                     'Pronounced Late Morning',
+                     'Dominant Early Morning',
+                     'Dominant Evening',
+                     'Dominant Morning']
+
+    df_use1 = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl')
+    df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
+    df_use = pd.concat([df_use1, df_use2], join='inner')
+    df_use = clean_outliers(df_use)
+    if period == 'year':
+        df_use = groupby_year(df_use)
+        ax3.set_xlim([0,23])
+    elif period == 'month':
+        df_use = groupby_month(df_use)
+        ax3.set_xlim([0,287])
+    elif period == 'season':
+        df_use = groupby_season(df_use)
+        ax3.set_xlim([0,95])
+    else:
+        print('keyword period must be one of "year", "month", or "season".')
+    df_use = df_use.multiply(7.48)
+    total_dict = {}
+    mean_dict = {}
+    for c in clusters:
+        cluster = [str(x) for x in cluster_df[cluster_df['DBA cluster'] == c].index.to_list()]
+        df_cluster_use =  df_use.filter(items=cluster)
+        total = df_cluster_use.sum(axis=1)
+        average = df_cluster_use.mean(axis=1)
+        total_dict[f'{cluster_names[c]}'] = total
+    total_total = sum(total_dict.values())
+    percent_dict = {k: v / total_total for k, v in total_dict.items()} 
+
+    if operation == 'total':
+        y_values = total_dict
+        y_label = 'Volume (gallons)'
+    elif operation == 'percent':
+        y_values = percent_dict
+        y_label = ' '
+        ax3.set_ylim([0, 1.10])
+        ax3.grid(which='both', axis='x')
+
+    ax3.stackplot(df_cluster_use.index, 
+                  y_values.values(),
+                  labels=total_dict.keys(),
+                  colors=cluster_colors,
+                  alpha=0.8)
+    ax3.legend(loc='upper right', reverse=True, fontsize=fontsize)
+    ax3.set_xlabel('Time (hr)', fontsize=fontsize)
+    ax3.set_ylabel(y_label, fontsize=fontsize)
+    ax3.tick_params(axis='x', labelsize=14)
+    ax3.tick_params(axis='y', labelsize=14)
+    #  fig3.savefig(f'{n_clusters}_{period}_clusters_stacked_total.png')
     plt.show()
 
 def lot_cluster_hist(n_clusters):
@@ -845,7 +1281,7 @@ def lot_cluster_hist(n_clusters):
             'Bathrooms', 
             'TotalValue']
     fig, axs = plt.subplots(len(atts), n_clusters)#, tight_layout=True)#, sharey=True)
-    n_bins = [21,21,8,7,21]
+    n_bins = [21,21,8,7,69]
     for a, att in enumerate(atts):
         #  fig, axs = plt.subplots(1, n_clusters, tight_layout=True, sharey=True)
         for i in range(n_clusters):
@@ -854,7 +1290,7 @@ def lot_cluster_hist(n_clusters):
             cluster_lot = lot_df.loc[lot_df['DBA cluster'] == i]
             axs[a][i].hist(cluster_lot[att], 
                         bins=n_bins[a],
-                        range=(xmin, xmax),
+                        #  range=(xmin, xmax),
                         density=True, 
                         color=cluster_colors[i],
                         histtype='bar')
