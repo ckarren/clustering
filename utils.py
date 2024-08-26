@@ -1132,7 +1132,140 @@ def plot_sankey():
 
     fig.update_layout(title_text="Basic Sankey Diagram", font_size=10)
     fig.show()   
-plot_sankey()
+
+def plot_boxplots(n_clusters):
+    cluster_names = ['DLN',
+                     'SMD',
+                     'DEM',
+                     'DE',
+                     'DM']
+    lot_df = pd.read_csv(f'../5_clusters_output/cluster_lot_info.csv')
+    lot_df['SQFTmain'] = lot_df['SQFTmain'].replace(0, np.NaN)
+    lot_df.dropna(subset=['SQFTmain'], inplace=True)
+    lot_df['EffectiveYearBuilt'] = 2018 - lot_df['EffectiveYearBuilt']
+    atts = ['EffectiveYearBuilt', 
+            'SQFTmain', 
+            'TotalValue']
+    att_labels = ['Home age', 
+                  'House size (ft^2)',
+                  'Home value ($)'
+                  ]
+    fig, axs = plt.subplots(1, len(atts), tight_layout=True)
+    for a, att in enumerate(atts):
+        att_list = []
+        for i in range(n_clusters):
+            cluster_lot = lot_df.loc[lot_df['DBA cluster'] == i]
+            att_list.append(cluster_lot[att])
+        bp = axs[a].boxplot(att_list, 
+                            labels=cluster_names, 
+                            showmeans=True,
+                            patch_artist=True,
+                            boxprops={'linewidth':2.0},
+                            whiskerprops={'linewidth':2.0},
+                            medianprops={'linewidth':1.5,
+                                         'color':'darkgray'},
+                            capprops={'linewidth':2.0},
+                                 )
+        for patch, color in zip(bp['boxes'], cluster_colors):
+            patch.set_facecolor(color)
+        axs[a].set_title(f'{att_labels[a]}')
+    plt.show()
+
+def cluster_lot(n_clusters, radius):
+    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
+    cluster_data = pd.read_csv(cluster_file, 
+                               usecols=[1,2], 
+                               index_col=0)
+    cluster_df = pd.DataFrame(cluster_data)
+    cluster_df.index = cluster_df.index.map(str)
+    census_df = pd.read_csv('../InputFiles/miu_census_tract_lot_2018.csv', 
+                            usecols=[2,8,27], 
+                            header=0)
+    census_df = census_df[census_df['PropertyType'] == 'SFR']
+    census_df.drop(columns=['PropertyType'], inplace=True)
+    census_df.rename(columns={'MiuId': 'User'}, inplace=True)
+    census_df.set_index('User', inplace=True)
+    lot_df = pd.read_pickle('../InputFiles/lot_SFR.pkl') 
+    lot_df.rename(columns={'MiuId': 'User'}, inplace=True)
+    lot_df.set_index('User', inplace=True)
+    lot_df.index = lot_df.index.map(str)
+    lot_df = lot_df.join(cluster_df, how='inner')
+    lot_df = lot_df.join(census_df, how='inner')
+    lot_df.to_csv(f'{n_clusters}_cluster_r{radius}_lot_census_tract.csv')
+    return lot_df
+
+def cluster_census():
+    file = pd.read_csv('../InputFiles/cluster_lot_census_tract.csv')
+    df = pd.DataFrame(file)
+    grouped = df.groupby(['TRACTCE', 'DBA cluster'])['DBA cluster'].count()
+    grouped.to_csv('../5_clusters_output/cluster_by_censustract.csv')
+
+def cluster_stacked_use(n_clusters, radius, period='year', operation='percent'):
+    clusters = list(range(n_clusters))
+    fontsize = 16
+
+    fig3, ax3 = plt.subplots()
+
+    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
+    cluster_data = pd.read_csv(cluster_file, 
+                               usecols=[1,2],
+                               index_col=0)
+    cluster_df = pd.DataFrame(cluster_data)
+    cluster_names = ['Dominant Late Night',
+                     'Pronounced Late Morning',
+                     'Dominant Early Morning',
+                     'Dominant Evening',
+                     'Dominant Morning']
+
+    df_use1 = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl')
+    df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
+    df_use = pd.concat([df_use1, df_use2], join='inner')
+    df_use = clean_outliers(df_use)
+    if period == 'year':
+        df_use = groupby_year(df_use)
+        ax3.set_xlim([0,23])
+    elif period == 'month':
+        df_use = groupby_month(df_use)
+        ax3.set_xlim([0,287])
+    elif period == 'season':
+        df_use = groupby_season(df_use)
+        ax3.set_xlim([0,95])
+    else:
+        print('keyword period must be one of "year", "month", or "season".')
+    df_use = df_use.multiply(7.48)
+    total_dict = {}
+    mean_dict = {}
+    for c in clusters:
+        cluster = [str(x) for x in cluster_df[cluster_df['DBA cluster'] == c].index.to_list()]
+        df_cluster_use =  df_use.filter(items=cluster)
+        total = df_cluster_use.sum(axis=1)
+        average = df_cluster_use.mean(axis=1)
+        total_dict[f'{cluster_names[c]}'] = total
+    total_total = sum(total_dict.values())
+    percent_dict = {k: v / total_total for k, v in total_dict.items()} 
+
+    if operation == 'total':
+        y_values = total_dict
+        y_label = 'Volume (gallons)'
+    elif operation == 'percent':
+        y_values = percent_dict
+        y_label = ' '
+        ax3.set_ylim([0, 1.10])
+        ax3.grid(which='both', axis='x')
+
+    ax3.stackplot(df_cluster_use.index, 
+                  y_values.values(),
+                  labels=total_dict.keys(),
+                  colors=cluster_colors,
+                  alpha=0.8)
+    ax3.legend(loc='upper right', reverse=True, fontsize=fontsize)
+    ax3.set_xlabel('Time (hr)', fontsize=fontsize)
+    ax3.set_ylabel(y_label, fontsize=fontsize)
+    ax3.tick_params(axis='x', labelsize=14)
+    ax3.tick_params(axis='y', labelsize=14)
+    #  fig3.savefig(f'{n_clusters}_{period}_clusters_stacked_total.png')
+    plt.show()
+
 def lot_cluster_hist(n_clusters):
     cluster_names = ['Dominant Late Night',
                      'Pronounced Late Morning',
@@ -1148,7 +1281,7 @@ def lot_cluster_hist(n_clusters):
             'Bathrooms', 
             'TotalValue']
     fig, axs = plt.subplots(len(atts), n_clusters)#, tight_layout=True)#, sharey=True)
-    n_bins = [21,21,8,7,21]
+    n_bins = [21,21,8,7,69]
     for a, att in enumerate(atts):
         #  fig, axs = plt.subplots(1, n_clusters, tight_layout=True, sharey=True)
         for i in range(n_clusters):
@@ -1157,7 +1290,7 @@ def lot_cluster_hist(n_clusters):
             cluster_lot = lot_df.loc[lot_df['DBA cluster'] == i]
             axs[a][i].hist(cluster_lot[att], 
                         bins=n_bins[a],
-                        range=(xmin, xmax),
+                        #  range=(xmin, xmax),
                         density=True, 
                         color=cluster_colors[i],
                         histtype='bar')
