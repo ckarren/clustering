@@ -1529,6 +1529,16 @@ def plot_cluster_map():
     #  fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
     fig.show()
 
+def compare_dba_results():
+    dfs = []
+    for i in range(10):
+        data = pd.read_csv(f'5_clusters_DTW_results_scaled_{i}.csv',
+                           usecols=[1,2], header=0, index_col=0)
+        df = pd.DataFrame(data)
+        dfs.append(df)
+    df_concat = pd.concat(dfs, axis=1, join='inner')
+    df_concat.to_csv('5_clusters_DTW_results_comps.csv')
+compare_dba_results()
 # for elasticity regression:
 
 def calc_average_price():
