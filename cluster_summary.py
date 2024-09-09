@@ -3,13 +3,14 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import utils as ut
+from utils import cluster_lot
 import numpy as np
 
 n_clusters = 5
 radius = 1
 fontsize = 18
 
-atts = ['EffectiveYearBuilt', 'SQFTmain', 'Bedrooms', 'Bathrooms', 'TotalValue']
+#  atts = ['EffectiveYearBuilt', 'SQFTmain', 'Bedrooms', 'Bathrooms', 'TotalValue']
 
 #  df_use1 = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl')
 #  df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
@@ -20,12 +21,13 @@ atts = ['EffectiveYearBuilt', 'SQFTmain', 'Bedrooms', 'Bathrooms', 'TotalValue']
 #  lot_summary_stat = lot_df[atts].describe()
 #  lot_summary_stat.to_csv('all_summary_stats.csv')
 #  lot_df = cluster_lot(n_clusters=n_clusters, radius=radius)
-lot_file = pd.read_csv('../5_clusters_output/cluster_lot_info.csv', 
-                       usecols=[0,6,7,8,9,13,18])
+lot_file = pd.read_csv('../5_clusters_output/cluster_lot_info_parcel_size.csv', 
+                       usecols=[1,5,7,8,9,10,14,19,21])
 lot_df = pd.DataFrame(lot_file)
 lot_df['SQFTmain'] = lot_df['SQFTmain'].replace(0, np.NaN)
 lot_df.dropna(subset=['SQFTmain'])
-breakpoint()
+lot_df['SpecificUseDetail2'] = lot_df['SpecificUseDetail2'].map({'Pool':1,
+                                                                 'Pool and Misc.':1}).fillna(0)
 #  atts = ['EffectiveYearBuilt', 'SQFTmain', 'Bedrooms', 'Bathrooms', 'TotalValue']
 
 #  lot_summary_stat = lot_df[atts].describe()
@@ -45,8 +47,10 @@ breakpoint()
 
 grouped = lot_df.groupby('DBA cluster')[['EffectiveYearBuilt',
                                          'SQFTmain',
-                                        'Bedrooms',
+                                         'Bedrooms',
                                          'Bathrooms',
-                                        'TotalValue']].agg(['max', 'min',
+                                         'TotalValue',
+                                         'Shape_Area']].agg(['max', 'min',
                                                             'mean', 'median'])
-grouped.to_csv('5_clusters_summary_stats_median.csv')
+pools = lot_df.groupby('DBA cluster')[['SpecificUseDetail2']].sum()
+grouped.to_csv('5_clusters_summary_stats_parcel_median.csv')

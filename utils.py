@@ -1,4 +1,5 @@
 import glob
+import matplotlib.lines as mlines
 from sklearn.preprocessing import normalize
 import plotly.express as px
 import plotly.graph_objects as go
@@ -20,6 +21,12 @@ cluster_colors = ['cornflowerblue',
                   'forestgreen',
                   'tomato',
                   'mediumorchid']
+
+cluster_colors_dict = {'DLN': 'cornflowerblue',
+                       'SMD': 'darkorange',
+                       'DEM': 'forestgreen',
+                       'DE': 'tomato',
+                       'DM': 'mediumorchid'}
 
 # for dashboard 
 def tot_col(dfx):
@@ -151,122 +158,7 @@ def clean_outliers_sd(df):
     df = df[df.columns[b]]
     return df
 
-def clean_outliers(df, lb=1.0, ub=100.0, ll=-1.0):
-    df = df[df.columns[~((df < lb).all(axis=0))]]
-    df = df[df.columns[~((df > ub).any(axis=0))]]
-    df = df[df.columns[~((df < ll).any(axis=0))]]
-    return df
-
-def summary(df):
-    a = stats.describe(df, axis=0)
-    return a
-
-def q1(dfx):
-    return dfx.quantile(0.25)
-
-def q2(dfx):
-    return dfx.quantile(0.5)
-
-def q3(dfx):
-    return dfx.quantile(0.75)
-
-def quant(dfx, col, qn):
-    new_col = 'Q' + str(col)
-    dfx[new_col] = pd.qcut(dfx[col], qn, labels = False, duplicates = 'drop') 
-    return dfx
-
-def weekends(dfx):
-    we = []
-    for i in dfx.index:
-        if i.dayofweek == 5:
-            we.append(i.date())
-    else:
-        pass
-    we = unique(we)
-    we = [datetime.combine(x, time()) for x in we]
-    wel = [x+timedelta(hours=47) for x in we]
-    return we, wel
-
-def add_time(n):
-    n.index = pd.to_datetime(n.index)
-    for i in n.index:
-        s = n.xs(i)
-        ni = i + timedelta(hours=23, minutes=59)
-        n.loc[ni] = s
-    n.sort_index(inplace=True)
-    return n
-
-def weekdays(dfx):
-    return dfx[dfx.index.dayofweek < 5] 
-
-def annotate_axes(ax, text, fontsize=18):
-    ax.text(0.5, 0.5, text, transform-ax.transAxes,
-            ha='center', va='center', fontsize=fontsize, color='black')
-
-# for clustering:
-def pickle_feature(input_path, output_path):
-    for i in range(1,7):
-        for j in range(1,3):
-            file = f'hourly_use_SFR_y{j}_p{i}.pkl'
-            df = pd.read_pickle(input_path + file)
-            week_df = df.groupby([df.index.weekday, df.index.hour]).mean()
-            print(f'Writing PDH_SFR_Y{j}P{i}.pkl file')
-            week_df.to_pickle(output_path + f'PDH_SFR_Y{j}P{i}.pkl')
-
-def split_week(df):
-    weekdays = df.loc[df.index.weekday.isin([0,1,2,3,4])]
-    weekends = df.loc[df.index.weekday.isin([5,6])]
-    return weekdays, weekends
-
-def groupby_month(df):
-    weekdays, weekends = split_week(df)
-  
-    monthly_wd = weekdays.groupby([weekdays.index.month, 
-                                   weekdays.index.hour]).mean()
-    #  monthly_we = weekends.groupby([weekends.index.month,
-                                   #  weekends.index.hour]).mean()
-    #  monthly_we.index = monthly_we.index.map('Month: {0[0]} Hour: {0[1]}'.format)
- 
-    monthly_wd.reset_index(drop=True, inplace=True)
-    #  monthly_we.reset_index(drop=True, inplace=True)
-
-    return monthly_wd#, monthly_we
-
-def groupby_year(df, op='mean'):
-    weekdays, weekends = split_week(df)
-
-    if op == 'mean':
-        annual_wd = weekdays.groupby(weekdays.index.hour).mean()
-        annual_we = weekends.groupby(weekends.index.hour).mean()
-    elif op == 'total':
-        annual_wd = weekdays.groupby(weekdays.index.hour).sum()
-        annual_we = weekends.groupby(weekends.index.hour).sum()
-
-    filtered_data = mdf[(mdf[filter_type] == filter_value)]
-    return filtered_data
-
-def miu_range_filter(miu_dataframe, filter_type1, fil_val1_lo, fil_val1_hi):
-    mdf = miu_dataframe.copy()
-    filtered_data = mdf.loc[(mdf[filter_type1] > fil_val1_lo) & (mdf[filter_type1] < fil_val1_hi), 'MiuId'].to_list()
-    data_list = [str(x) for x in filtered_data]
-    return data_list
-
-def combine_filters(fd1, fd2):
-    c = [str(value) for value in fd1 if value in fd2]
-    return c
-
-def clean_outliers_sd(df):
-    df = df[df.columns[(np.abs(stats.zscore(df, axis=1)) < 3).all(axis=0)]]
-    a = df.max(axis=None)
-    a = (np.abs(stats.zscore(df, axis=1)) < 3).all(axis=0)
-    df = df.iloc[:,0:8]
-    a = stats.zscore(df, axis=1)
-    a.iloc[1,2] = 5
-    b = (np.abs(a) < 3).all(axis=0)
-    df = df[df.columns[b]]
-    return df
-
-def clean_outliers(df, lb=1.0, ub=100.0, ll=-10.0):
+def clean_outliers(df, lb=1.0, ub=400.0, ll=-10.0):
     df = df[df.columns[~((df < lb).all(axis=0))]]
     df = df[df.columns[~((df > ub).any(axis=0))]]
     df = df[df.columns[~((df < ll).any(axis=0))]]
@@ -378,7 +270,7 @@ def groupby_season(df):
     #  spring_we = weekends.loc[weekends.index.month.isin(spring)]
     autumn_wd = weekdays.loc[weekdays.index.month.isin(autumn)].copy()  
     #  autumn_we = weekends.loc[weekends.index.month.isin(spring)]
-    winter_wd = weekdays.loc[weekdays.index.month.isin(autumn)].copy()  
+    winter_wd = weekdays.loc[weekdays.index.month.isin(winter)].copy()  
     #  winter_we = weekends.loc[weekends.index.month.isin(spring)]
 
     summer_wd_avg = summer_wd.groupby(summer_wd.index.hour).mean()
@@ -607,26 +499,28 @@ def cluster_hourly_heatmap():
     file = '../5_clusters_output/total_hourly_use_by_cluster.csv'
     df = pd.read_csv(file, header=0, index_col=0)
     df['Total'] = df.sum(axis=1)
+    df_normal = df / df.max()
+    df_normal = df_normal.T
     df = df.T
-    minmin = df.min().min()
-    maxmax = df.max().max()
-    clusters = df.iloc[:-1,:]
-    total = df.iloc[-1:,:]
-    fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1)
+    clusters = df_normal.iloc[:-1,:]
+    total = df_normal.iloc[-1:,:]
+    fig, axs = plt.subplots(nrows=2, ncols=1, sharex=True)
     #  ax2.pcolormesh(clusters)
-    im1 = ax1.imshow(clusters, 
-                     vmin=minmin,
-                     vmax=maxmax)
+    im1 = axs[0].imshow(clusters) 
     #  ax2.xaxis.set_ticklabels([])
     #  ax2.yaxis.set_ticklabels(['1', '2', '3', '4', '5'])
-    ax1.set_yticks(np.arange(len(df.index)-1), ['1', '2', '3', '4', '5'])
-    ax1.set_ylabel('Cluster')
+    #  ax1.set_yticks(np.arange(len(df.index)-1), ['1', '2', '3', '4', '5'])
+    axs[0].set_yticks(np.arange(len(df.index)-1), ['DLN', 'SMD', 'DEM', 'DE',
+                                                'DM'])
+    axs[0].set_ylabel('Cluster', fontsize=16)
+    axs[0].tick_params(labelsize=14)
+    axs[0].xaxis.set_ticklabels([])
     #  ax1.pcolormesh(total)
-    im2 = ax2.imshow()
-    ax2.yaxis.set_ticklabels([])
-    ax2.set_xlabel('Time (hr)')
-    ax2.set_ylabel('Total')
-    pad = 0.3
+    im2 = axs[1].imshow(total)
+    axs[1].yaxis.set_ticklabels([])
+    axs[1].tick_params(labelsize=14)
+    axs[1].set_xlabel('Time (hr)', fontsize=16)
+    axs[1].set_ylabel('Total', fontsize=16)
 
     #  divider = VBoxDivider(
         #  fig, 111,
@@ -636,7 +530,8 @@ def cluster_hourly_heatmap():
     #  ax1.set_axes_locator(divider.new_locator(0))
     #  ax2.set_axes_locator(divider.new_locator(2))
     #  fig.colorbar(im1, ax=ax1, location='bottom', label='Volume (gallons)')
-    fig.colorbar(im2, ax=ax2, location='bottom', label='Volume (gallons)')
+    cbar = fig.colorbar(im1, ax=axs[1], orientation='horizontal')
+    cbar.ax.tick_params(labelsize=14)
     plt.show()
 
 def cluster_hourly_heatmap_ind(n_clusters, radius):
@@ -724,7 +619,7 @@ def cluster_hourly_heatmap_all(n_clusters, radius, period='year'):
 
     clusters = list(range(n_clusters))
     cluster_names = ['Dominant Late Night',
-                     'Pronounced Late Morning',
+                     'Steady Mid-Day',
                      'Dominant Early Morning',
                      'Dominant Evening',
                      'Dominant Morning']
@@ -749,24 +644,27 @@ def cluster_hourly_heatmap_all(n_clusters, radius, period='year'):
         df_use_c =  normalized_use.filter(items=cluster)
         df_use_c = df_use_c.T
         im = axs[c].imshow(df_use_c, aspect='auto')
-        axs[c].tick_params(axis='x', labelsize=10)
+        axs[c].tick_params(axis='x', labelsize=12)
         axs[c].yaxis.set_ticklabels([])
-        axs[c].xaxis.set_major_locator(ticker.FixedLocator([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]))
-        axs[c].xaxis.set_ticklabels(['00:00','01:00', '02:00', '03:00', '04:00',
-                                     '05:00', '06:00', '07:00', '08:00',
-                                     '09:00', '10:00', '11:00', '12:00',
-                                     '01:00', '02:00', '03:00', '04:00',
-                                     '05:00', '06:00', '07:00', '08:00',
-                                     '09:00', '10:00', '11:00'],
-                                    rotation='vertical')
+        #  axs[c].xaxis.set_major_locator(ticker.FixedLocator([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]))
+        axs[c].xaxis.set_major_locator(ticker.FixedLocator([0,4,8,12,16,20,23]))
+        #  axs[c].xaxis.set_ticklabels(['00:00','01:00', '02:00', '03:00', '04:00',
+                                     #  '05:00', '06:00', '07:00', '08:00',
+                                     #  '09:00', '10:00', '11:00', '12:00',
+                                     #  '01:00', '02:00', '03:00', '04:00',
+                                     #  '05:00', '06:00', '07:00', '08:00',
+                                     #  '09:00', '10:00', '11:00'],
+                                    #  rotation='vertical')
+        axs[c].xaxis.set_ticklabels(['00:00', '04:00','08:00', '12:00', '04:00', '08:00', '11:00'], rotation='vertical')
         axs[c].annotate(f'{cluster_names[c]}',
                         xy=(0.50, 1.03), xycoords='axes fraction',
                         ha='center', va='top',
-                        fontsize=14
+                        fontsize=16
                         )
         if c == 4:
             cbar = axs[c].figure.colorbar(im, ax=axs[c], location='right',
                                           orientation='vertical')
+            cbar.ax.tick_params(labelsize=16)
     plt.show()
 
 def cluster_summary(n_clusters, radius, **kwargs): 
@@ -809,7 +707,7 @@ def cluster_summary(n_clusters, radius, **kwargs):
     fontsize = 18
     #  colors =
     cluster_names = ['Dominant Late Night',
-                     'Pronounced Late Morning',
+                     'Steady Mid-Day',
                      'Dominant Early Morning',
                      'Dominant Evening',
                      'Dominant Morning']
@@ -902,24 +800,25 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
     radii (list): list of radii to compare
     """
 
-    cluster_file = 'rename_clusters_by_season.csv'
-    #  cluster_file = f'../RadiusComps/{n_clusters}_euclidean_results_dtw{radius}.csv'
+    #  cluster_file = 'rename_clusters_by_season.csv'
+    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
     df_cluster = pd.read_csv(cluster_file,
+                             usecols=[1,2],
                             header=0,
                             index_col=0
                             )
     df_use1 = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl') 
     df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
     df_use = pd.concat([df_use1, df_use2], join='inner')
-    df_use1 = clean_outliers(df_use1)
-    df_use2 = clean_outliers(df_use2)
+    #  df_use1 = clean_outliers(df_use1)
+    #  df_use2 = clean_outliers(df_use2)
     df_use = clean_outliers(df_use)
     df_use = df_use.multiply(7.48).round(2)
 
     if vertical:
         nrows = n_clusters
         ncols = 1
-        figsize = (6, 40)
+        figsize = (8, 40)
         sharex = True
         sharey = False
     else:
@@ -929,7 +828,7 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
         sharex = False
         sharey = True
 
-    df_use = groupby_season(df_use)
+    #  df_use = groupby_season(df_use)
 
     fig, axs = plt.subplots(nrows=nrows,
                             ncols=ncols,
@@ -937,82 +836,84 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
                             sharex=sharex,
                             sharey=sharey,
                             layout='constrained')
-    #  if kwargs['period']:
-        #  if kwargs['period'] == 'year':
-            #  df_use = groupby_year(df_use)
-            #  for ax in axs:
-                #  ax.set_xlim([0,23])
+    if kwargs['period']:
+        if kwargs['period'] == 'year':
+            df_use = groupby_year(df_use)
+            for ax in axs:
+                ax.set_xlim([0,23])
                 #  ax.set_ylim([0,45.0])
-        #  elif kwargs['period'] == 'month':
-            #  df_use = groupby_month(df_use)
-            #  for ax in axs:
-                #  ax.set_xlim([0,287])
+        elif kwargs['period'] == 'month':
+            df_use = groupby_month(df_use)
+            for ax in axs:
+                ax.set_xlim([0,287])
                 #  ax.set_ylim([0,45.0])
-        #  elif kwargs['period'] == 'season':
-            #  df_use = groupby_season(df_use)
-            #  for ax in axs:
-                #  ax.set_xlim([0,95])
+        elif kwargs['period'] == 'season':
+            df_use = groupby_season(df_use)
+            for ax in axs:
+                ax.set_xlim([0,95])
                 #  ax.set_ylim([0,45.0])
 
     if kwargs['season']:
         season = kwargs['season']
-        #  if season == 'summer':
-        #  for ax in axs:
-            #  ax.set_ylim([0,45.0])
-            #  ax.set_xlim([0,23])
-        #  elif season == 'autumn':
-            #  for ax in axs:
-                #  ax.set_ylim([0,35.0])
-        #  elif season == 'winter':
-            #  for ax in axs:
-                #  ax.set_ylim([0,35.0])
-        #  elif season == 'spring':
-            #  for ax in axs:
-                #  ax.set_ylim([0,35.0])
         if season == 'summer':
+            for ax in axs:
+                #  ax.set_ylim([0,45.0])
+                ax.set_xlim([0,23])
             df_use = df_use.iloc[0:24,:]
         elif season == 'autumn':
+            for ax in axs:
+                #  ax.set_ylim([0,35.0])
+                ax.set_xlim([0,23])
             df_use = df_use.iloc[24:48,:]
             df_use.reset_index(drop=True, inplace=True)
         elif season == 'winter':
+            for ax in axs:
+                #  ax.set_ylim([0,35.0])
+                ax.set_xlim([0,23])
             df_use = df_use.iloc[48:72,:]
             df_use.reset_index(drop=True, inplace=True)
         elif season == 'spring':
+            for ax in axs:
+                #  ax.set_ylim([0,35.0])
+                ax.set_xlim([0,23])
             df_use = df_use.iloc[72:97,:]
             df_use.reset_index(drop=True, inplace=True)
-
-    df_cluster.filter(items = [f'{season} Cluster'])
+#
+    #  df_cluster.filter(items = [f'{season} Cluster'])
     clusters = list(range(n_clusters))
-    fontsize = 16
+    fontsize = 18
     #  colors =
     cluster_names = ['Dominant Late Night',
-                     'Pronounced Late Morning',
+                     'Steady Mid-Day',
                      'Dominant Early Morning',
                      'Dominant Evening',
                      'Dominant Morning']
+    ylims = [30, 20, 45, 25, 35]
 
     for c in clusters:
-        #  cluster = [str(x) for x in df_cluster[df_cluster['DBA cluster'] == c].index.to_list()]
-        cluster = [str(x) for x in df_cluster[df_cluster[f'{season} Cluster'] == c].index.to_list()]
+        cluster = [str(x) for x in df_cluster[df_cluster['DBA cluster'] == c].index.to_list()]
+        #  cluster = [str(x) for x in df_cluster[df_cluster[f'{season} Cluster'] == c].index.to_list()]
         df_use_c =  df_use.filter(items=cluster)
         total = df_use_c.sum(axis=1)
         average = df_use_c.mean(axis=1)
+        peak = np.round(average.max(), 1)
+        peakx = average.idxmax()
         #  for i in df_use_c.columns:
             #  i = str(i)
         #  axs[c].plot(df_use_c.index, df_use_c.iloc[:,278], c='grey')
-        axs[c].set_xlim([0,23])
-        axs[c].set_ylim([0,55])
         axs[c].plot(df_use_c.index, average, "o-", c=cluster_colors[c], linewidth=3)
-        axs[c].tick_params(axis='x', labelsize=14)
-        axs[c].tick_params(axis='y', labelsize=14)
+        axs[c].tick_params(axis='x', labelsize=16)
+        axs[c].tick_params(axis='y', labelsize=16)
         axs[c].annotate(f'{cluster_names[c]}', 
                         xy=(0.95, 0.95), xycoords='axes fraction', 
                         ha='right', va='top', 
-                        fontsize=14
+                        fontsize=16
                         )
+        axs[c].annotate(f'{peak}', xy=(peakx,peak), fontsize=14)
+        #  axs[c].set_ylim([0, ylims[c]])
     fig.supxlabel('Time (hr)', fontsize=fontsize)
     fig.supylabel('Volume (gallons)', fontsize=fontsize)
-    fig.suptitle(f'{season}')
+    #  fig.suptitle(f'{season}')
     plt.show()
     #  fig.savefig(f'../5_clusters_output/5_clusters_average_{season}_2.png')
 
@@ -1133,29 +1034,64 @@ def plot_sankey():
     fig.update_layout(title_text="Basic Sankey Diagram", font_size=10)
     fig.show()   
 
-def plot_boxplots(n_clusters):
+def add_parcel_size():
+    lot = pd.read_csv(f'../5_clusters_output/cluster_lot_info.csv')
+    lot_df = pd.DataFrame(lot)
+    parcel = pd.read_csv('../InputFiles/parcel_size.csv', header=0,
+                         usecols=[3,16]) 
+
+    parcel_df = pd.DataFrame(parcel)
+    #  print(parcel_df.head())
+    df = lot_df.merge(parcel_df, how='left', left_on='Address', right_on='SitusAddre')
+    df.to_csv('cluster_lot_info_parcel_size.csv')
+
+def plot_boxplots(n_clusters, atts, anova=False):
     cluster_names = ['DLN',
                      'SMD',
                      'DEM',
                      'DE',
                      'DM']
-    lot_df = pd.read_csv(f'../5_clusters_output/cluster_lot_info.csv')
-    lot_df['SQFTmain'] = lot_df['SQFTmain'].replace(0, np.NaN)
-    lot_df.dropna(subset=['SQFTmain'], inplace=True)
-    lot_df['EffectiveYearBuilt'] = 2018 - lot_df['EffectiveYearBuilt']
-    atts = ['EffectiveYearBuilt', 
-            'SQFTmain', 
-            'TotalValue']
-    att_labels = ['Home age', 
-                  'House size (ft^2)',
-                  'Home value ($)'
-                  ]
-    fig, axs = plt.subplots(1, len(atts), tight_layout=True)
+    cols = atts + ['DBA cluster']
+    #  atts.append('DBA cluster')
+    lot_df = pd.read_csv(f'../5_clusters_output/cluster_lot_info_parcel_size.csv',
+                usecols=cols)
+    if 'SQFTmain' in atts:
+        lot_df['SQFTmain'] = lot_df['SQFTmain'].replace(0, np.NaN)
+        lot_df.dropna(subset=['SQFTmain'], inplace=True)
+    if 'EffectiveYearBuilt' in atts:
+        lot_df['EffectiveYearBuilt'] = 2018 - lot_df['EffectiveYearBuilt']
+    #  lot_df.rename(columns={'EffectiveYearBuilt':'Home age',
+                           #  'SQFTmain': 'House size (ft^2)',
+                           #  'TotalValue': 'Home value ($)',
+                           #  'Shape_Area': 'Lot size (ft^2)'},
+                  #  inplace=True)
+    
+    #  atts = ['EffectiveYearBuilt',
+            #  #  'Bedrooms',
+            #  #  'Bathrooms',
+            #  'SQFTmain',
+            #  'TotalValue',
+    #          'Shape_Area']
+    att_labels = {'EffectiveYearBuilt': 'Home age',
+                  'Bedrooms':'Bedrooms',
+                  'Batchrooms': 'Bathrooms',
+                  'SQFTmain': 'House size (ft^2)',
+                  'TotalValue': 'Home value ($)',
+                  'Shape_Area': 'Lot size (ft^2)'
+                  }
+    p_values = {}
+    p_values.fromkeys(atts)
+    #  fig, axs = plt.subplots(1, len(atts), tight_layout=True)
+    fig, axs = plt.subplots(2, 2)
+    axs = axs.flat
     for a, att in enumerate(atts):
         att_list = []
         for i in range(n_clusters):
             cluster_lot = lot_df.loc[lot_df['DBA cluster'] == i]
             att_list.append(cluster_lot[att])
+        if anova:
+            anova = stats.f_oneway(*att_list)
+            p_values[att] = anova
         bp = axs[a].boxplot(att_list, 
                             labels=cluster_names, 
                             showmeans=True,
@@ -1165,11 +1101,17 @@ def plot_boxplots(n_clusters):
                             medianprops={'linewidth':1.5,
                                          'color':'darkgray'},
                             capprops={'linewidth':2.0},
+                            meanprops={'color':'black'}
                                  )
         for patch, color in zip(bp['boxes'], cluster_colors):
             patch.set_facecolor(color)
-        axs[a].set_title(f'{att_labels[a]}')
+        axs[a].set_title(f'{att_labels[att]}', fontsize=16)
+        axs[a].tick_params(labelsize=14)
+        if att in ['TotalValue', 'Shape_Area']:
+            axs[a].set_yscale('log')
     plt.show()
+    if anova:
+        print(p_values) 
 
 def cluster_lot(n_clusters, radius):
     cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
@@ -1202,9 +1144,9 @@ def cluster_census():
 
 def cluster_stacked_use(n_clusters, radius, period='year', operation='percent'):
     clusters = list(range(n_clusters))
-    fontsize = 16
+    fontsize = 18
 
-    fig3, ax3 = plt.subplots()
+    fig, ax = plt.subplots()
 
     cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
     cluster_data = pd.read_csv(cluster_file, 
@@ -1212,36 +1154,40 @@ def cluster_stacked_use(n_clusters, radius, period='year', operation='percent'):
                                index_col=0)
     cluster_df = pd.DataFrame(cluster_data)
     cluster_names = ['Dominant Late Night',
-                     'Pronounced Late Morning',
+                     'Steady Mid-Day',
                      'Dominant Early Morning',
                      'Dominant Evening',
                      'Dominant Morning']
 
-    df_use1 = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl')
-    df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
-    df_use = pd.concat([df_use1, df_use2], join='inner')
+    df_use = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl')
+    #  df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
+    #  df_use = pd.concat([df_use1, df_use2], join='inner')
     df_use = clean_outliers(df_use)
     if period == 'year':
         df_use = groupby_year(df_use)
-        ax3.set_xlim([0,23])
+        ax.set_xlim([0,23])
     elif period == 'month':
         df_use = groupby_month(df_use)
-        ax3.set_xlim([0,287])
+        ax.set_xlim([0,287])
     elif period == 'season':
         df_use = groupby_season(df_use)
-        ax3.set_xlim([0,95])
+        ax.set_xlim([0,95])
     else:
         print('keyword period must be one of "year", "month", or "season".')
     df_use = df_use.multiply(7.48)
+    if operation == 'total':
+        df_use = df_use.multiply(0.001)
     total_dict = {}
-    mean_dict = {}
+    average_dict = {}
     for c in clusters:
         cluster = [str(x) for x in cluster_df[cluster_df['DBA cluster'] == c].index.to_list()]
         df_cluster_use =  df_use.filter(items=cluster)
         total = df_cluster_use.sum(axis=1)
         average = df_cluster_use.mean(axis=1)
         total_dict[f'{cluster_names[c]}'] = total
+        average_dict[f'{cluster_names[c]}'] = average
     total_total = sum(total_dict.values())
+    average_total = sum(average_dict.values())
     percent_dict = {k: v / total_total for k, v in total_dict.items()} 
 
     if operation == 'total':
@@ -1250,38 +1196,47 @@ def cluster_stacked_use(n_clusters, radius, period='year', operation='percent'):
     elif operation == 'percent':
         y_values = percent_dict
         y_label = ' '
-        ax3.set_ylim([0, 1.10])
-        ax3.grid(which='both', axis='x')
+        ax.set_ylim([0, 1.10])
+        y_label = 'Volume (gallonsx10^3)'
+    elif operation == 'average':
+        y_values = average_dict
+        y_label = 'Volume (gallons)'
 
-    ax3.stackplot(df_cluster_use.index, 
+    ax.stackplot(df_cluster_use.index, 
                   y_values.values(),
                   labels=total_dict.keys(),
                   colors=cluster_colors,
                   alpha=0.8)
-    ax3.legend(loc='upper right', reverse=True, fontsize=fontsize)
-    ax3.set_xlabel('Time (hr)', fontsize=fontsize)
-    ax3.set_ylabel(y_label, fontsize=fontsize)
-    ax3.tick_params(axis='x', labelsize=14)
-    ax3.tick_params(axis='y', labelsize=14)
+    fig.legend(ncols=3,
+               loc='upper center', 
+               reverse=True, 
+               fontsize=fontsize)
+    ax.set_xlabel('Time (hr)', fontsize=fontsize)
+    ax.set_ylabel(y_label, fontsize=fontsize)
+    ax.tick_params(axis='x', labelsize=16)
+    ax.tick_params(axis='y', labelsize=16)
+
     #  fig3.savefig(f'{n_clusters}_{period}_clusters_stacked_total.png')
     plt.show()
 
 def lot_cluster_hist(n_clusters):
     cluster_names = ['Dominant Late Night',
-                     'Pronounced Late Morning',
+                     'Steady Mid-Day',
                      'Dominant Early Morning',
                      'Dominant Evening',
                      'Dominant Morning']
-    lot_df = pd.read_csv(f'../5_clusters_output/cluster_lot_info.csv')
+    lot_df = pd.read_csv(f'../5_clusters_output/cluster_lot_info_parcel_size.csv')
     lot_df['SQFTmain'] = lot_df['SQFTmain'].replace(0, np.NaN)
     lot_df.dropna(subset=['SQFTmain'], inplace=True)
     atts = ['EffectiveYearBuilt', 
             'SQFTmain', 
-            'Bedrooms', 
-            'Bathrooms', 
-            'TotalValue']
+            #  'Bedrooms',
+            #  'Bathrooms',
+            'TotalValue',
+            'Shape_Area']
+    colors = ['red', 'yellowgreen', 'teal', 'lightsteelblue'] 
     fig, axs = plt.subplots(len(atts), n_clusters)#, tight_layout=True)#, sharey=True)
-    n_bins = [21,21,8,7,69]
+    #  n_bins = [15, 15, 15, 5]
     for a, att in enumerate(atts):
         #  fig, axs = plt.subplots(1, n_clusters, tight_layout=True, sharey=True)
         for i in range(n_clusters):
@@ -1289,25 +1244,27 @@ def lot_cluster_hist(n_clusters):
             xmax = lot_df[att].max()
             cluster_lot = lot_df.loc[lot_df['DBA cluster'] == i]
             axs[a][i].hist(cluster_lot[att], 
-                        bins=n_bins[a],
+                        #  bins=n_bins[a],
                         #  range=(xmin, xmax),
                         density=True, 
-                        color=cluster_colors[i],
+                        color = colors[a],
+                        #  color=cluster_colors[i],
                         histtype='bar')
             #  axs[a][i].annotate(f'{cluster_names[i]}',
                         #  xy=(0.5, 0.95), xycoords='axes fraction',
                         #  ha='center', va='top',
                         #  fontsize=12
                         #  )
-       #  axs[a][i].set_title(f'{cluster_names[i]}')
-            if a == 0:
-                axs[a][i].set_title(f'{cluster_names[i]}', fontsize=14)
+            axs[a][i].tick_params(labelsize=16)
+            if a == 3:
+                axs[a][i].set_xlabel(f'{cluster_names[i]}', fontsize=14)
             if i == 2:
-                axs[a][i].set_xlabel(f'{att}', fontsize=14)
+                axs[a][i].set_title(f'{att}', fontsize=16)
             if i > 0:
                 axs[a][i].sharey(axs[a][0])
+                axs[a][i].tick_params(labelleft=False)
         #  fig.supxlabel(f'{att}')
-    fig.supylabel('Probability density')
+    fig.supylabel('Probability density', fontsize=16)
     plt.show()
 
 def cluster_lot(n_clusters, radius):
@@ -1339,71 +1296,136 @@ def cluster_census():
     grouped = df.groupby(['TRACTCE', 'DBA cluster'])['DBA cluster'].count()
     grouped.to_csv('../5_clusters_output/cluster_by_censustract.csv')
 
-def cluster_stacked_use(n_clusters, radius, period='year', operation='percent'):
-    clusters = list(range(n_clusters))
-    fontsize = 16
+def census_trends():
+    attrs = ['income', 'gt75', 'size', 'age']
+    attr_dict = {'income': ['median income ($)'],
+                 'gt75': ['% households with member >75 years old'],
+                 'age': ['median age of head-of-householder'],
+                 'size': ['median number of household members']}
 
-    fig3, ax3 = plt.subplots()
+    cluster_dict = {'DLN': ['cornflowerblue', 'o'],
+                       'SMD': ['darkorange', 'v'],
+                       'DEM': ['forestgreen', '<'],
+                       'DE': ['tomato', 's'],
+                       'DM': ['mediumorchid', 'D']}
 
-    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
-    cluster_data = pd.read_csv(cluster_file, 
-                               usecols=[1,2],
-                               index_col=0)
-    cluster_df = pd.DataFrame(cluster_data)
-    cluster_names = ['Dominant Late Night',
-                     'Pronounced Late Morning',
-                     'Dominant Early Morning',
-                     'Dominant Evening',
-                     'Dominant Morning']
+    data = pd.read_csv('../5_clusters_output/cluster_medians_by_census.csv',
+                      header=0)
+    df = pd.DataFrame(data)
+    clusters = ['DLN', 'SMD', 'DEM', 'DE', 'DM']
+    fig, axs = plt.subplots(2, 2, sharey=True)
+    axs = axs.flat
+    hand = []
+    lab = []
+    for a, att in enumerate(attrs):
+        cl = []
+        res = []
+        for c in clusters:
+            x = df[att]
+            y = df[c]
+            slope, intercept, r_value, p_value, std_err = stats.linregress(x,y)
+            if r_value**2 > 0.1:
+                cl.append(c) 
+                res.append((intercept, slope))
+        for i, c in enumerate(cl):
+            x = df[att]
+            y = df[c]
+            axs[a].scatter(x,y, 
+                           color=cluster_dict[c][0],
+                           marker=cluster_dict[c][1],
+                           label=c,
+                           linewidth=2)
+            axs[a].plot(x, res[i][0] + res[i][1]*x,
+                        color=cluster_dict[c][0],
+                        linewidth=2.5)
+            axs[a].set_xlabel(f'{attr_dict[att][0]}', fontsize=14)
+            axs[a].tick_params(labelsize=14)
+            #  axs[a].legend(loc='upper right', fontsize=12)
+        if a in [0,2]:
+            axs[a].set_ylabel('% population', fontsize=14)
+        handles, labels = axs[a].get_legend_handles_labels()
+        hand.append(handles)
+        lab.append(labels)
+    hand_flat = [x for xs in hand for x in xs]
+    lab_flat = [x for xs in lab for x in xs]
+    handles_unique = list(set(hand_flat))
+    labels_unique = list(set(lab_flat))
 
-    df_use1 = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl')
-    df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
-    df_use = pd.concat([df_use1, df_use2], join='inner')
-    df_use = clean_outliers(df_use)
-    if period == 'year':
-        df_use = groupby_year(df_use)
-        ax3.set_xlim([0,23])
-    elif period == 'month':
-        df_use = groupby_month(df_use)
-        ax3.set_xlim([0,287])
-    elif period == 'season':
-        df_use = groupby_season(df_use)
-        ax3.set_xlim([0,95])
-    else:
-        print('keyword period must be one of "year", "month", or "season".')
-    df_use = df_use.multiply(7.48)
-    total_dict = {}
-    mean_dict = {}
-    for c in clusters:
-        cluster = [str(x) for x in cluster_df[cluster_df['DBA cluster'] == c].index.to_list()]
-        df_cluster_use =  df_use.filter(items=cluster)
-        total = df_cluster_use.sum(axis=1)
-        average = df_cluster_use.mean(axis=1)
-        total_dict[f'{cluster_names[c]}'] = total
-    total_total = sum(total_dict.values())
-    percent_dict = {k: v / total_total for k, v in total_dict.items()} 
+    #  DEM_line = mlines.Line2D([], [], color='blue', marker='*',
+                          #  markersize=15, label='Blue stars')
 
-    if operation == 'total':
-        y_values = total_dict
-        y_label = 'Volume (gallons)'
-    elif operation == 'percent':
-        y_values = percent_dict
-        y_label = ' '
-        ax3.set_ylim([0, 1.10])
-        ax3.grid(which='both', axis='x')
-
-    ax3.stackplot(df_cluster_use.index, 
-                  y_values.values(),
-                  labels=total_dict.keys(),
-                  colors=cluster_colors,
-                  alpha=0.8)
-    ax3.legend(loc='upper right', reverse=True, fontsize=fontsize)
-    ax3.set_xlabel('Time (hr)', fontsize=fontsize)
-    ax3.set_ylabel(y_label, fontsize=fontsize)
-    ax3.tick_params(axis='x', labelsize=14)
-    ax3.tick_params(axis='y', labelsize=14)
-    #  fig3.savefig(f'{n_clusters}_{period}_clusters_stacked_total.png')
+    fig.legend(handles_unique, 
+               labels_unique, 
+               loc='outside upper center',
+               fontsize=14,
+               ncols=len(labels_unique))
     plt.show()
+
+#  def cluster_stacked_use(n_clusters, radius, period='year', operation='percent'):
+    #  clusters = list(range(n_clusters))
+    #  fontsize = 16
+    #
+    #  fig3, ax3x = plt.subplots()
+    #
+    #  cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
+    #  cluster_data = pd.read_csv(cluster_file,
+    #                             usecols=[1,2],
+    #                             index_col=0)
+    #  cluster_df = pd.DataFrame(cluster_data)
+    #  cluster_names = ['Dominant Late Night',
+    #                   'Pronounced Late Morning',
+    #                   'Dominant Early Morning',
+    #                   'Dominant Evening',
+    #                   'Dominant Morning']
+    #
+    #  df_use1 = pd.read_pickle('../InputFiles/y1_SFR_hourly.pkl')
+    #  df_use2 = pd.read_pickle('../InputFiles/y2_SFR_hourly.pkl')
+    #  df_use = pd.concat([df_use1, df_use2], join='inner')
+    #  df_use = clean_outliers(df_use)
+    #  if period == 'year':
+    #      df_use = groupby_year(df_use)
+    #      ax3x.set_xlim([0,23])
+    #  elif period == 'month':
+    #      df_use = groupby_month(df_use)
+    #      ax3x.set_xlim([0,287])
+    #  elif period == 'season':
+    #      df_use = groupby_season(df_use)
+    #      ax3x.set_xlim([0,95])
+    #  else:
+    #      print('keyword period must be one of "year", "month", or "season".')
+    #  df_use = df_use.multiply(7.48)
+    #  total_dict = {}
+    #  mean_dict = {}
+    #  for c in clusters:
+    #      cluster = [str(x) for x in cluster_df[cluster_df['DBA cluster'] == c].index.to_list()]
+    #      df_cluster_use =  df_use.filter(items=cluster)
+    #      total = df_cluster_use.sum(axis=1)
+    #      average = df_cluster_use.mean(axis=1)
+    #      total_dict[f'{cluster_names[c]}'] = total
+    #  total_total = sum(total_dict.values())
+    #  percent_dict = {k: v / total_total for k, v in total_dict.items()}
+    #
+    #  if operation == 'total':
+    #      y_values = total_dict
+    #      y_label = 'Volume (gallons)'
+    #  elif operation == 'percent':
+    #      y_values = percent_dict
+    #      y_label = ' '
+    #      ax3x.set_ylim([0, 1.10])
+    #      ax3x.grid(which='both', axis='x')
+    #
+    #  ax3x.stackplot(df_cluster_use.index,
+    #                y_values.values(),
+    #                labels=total_dict.keys(),
+    #                colors=cluster_colors,
+    #                alpha=0.8)
+    #  ax3x.legend(loc='upper right', reverse=True, fontsize=fontsize)
+    #  ax3x.set_xlabel('Time (hr)', fontsize=fontsize)
+    #  ax3x.set_ylabel(y_label, fontsize=fontsize)
+    #  ax3x.tick_params(axis='x', labelsize=14)
+    #  ax3x.tick_params(axis='y', labelsize=14)
+    #  #  fig3.savefig(f'{n_clusters}_{period}_clusters_stacked_total.png')
+#      plt.show()
 
 def cluster_census_map():
     token = open(".public_token").read()
