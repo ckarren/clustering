@@ -792,6 +792,63 @@ def rename_seasonal_cluster():
     df.to_csv('rename_clusters_by_season.csv')
     return df
 
+def by_period(period, df_use, axs):
+    if period == 'year':
+        df_use = groupby_year(df_use)
+        for ax in axs:
+            ax.set_xlim([0,23])
+        #  ax.set_ylim([0,45.0])
+    elif period == 'month':
+        df_use = groupby_month(df_use)
+        for ax in axs:
+            ax.set_xlim([0,287])
+        #  ax.set_ylim([0,45.0])
+    elif period == 'season':
+        df_use = groupby_season(df_use)
+        for ax in axs:
+            ax.set_xlim([0,95])
+    return df_use
+
+def by_season(season, df_use, axs):
+    if season == 'summer':
+        for ax in axs:
+            #  ax.set_ylim([0,45.0])
+            ax.set_xlim([0,23])
+        df_use = df_use.iloc[0:24,:]
+        return df_use
+    elif season == 'autumn':
+        for ax in axs:
+            #  ax.set_ylim([0,35.0])
+            ax.set_xlim([0,23])
+        df_use = df_use.iloc[24:48,:]
+        df_use.reset_index(drop=True, inplace=True)
+        return df_use
+    elif season == 'winter':
+        for ax in axs:
+            #  ax.set_ylim([0,35.0])
+            ax.set_xlim([0,23])
+        df_use = df_use.iloc[48:72,:]
+        df_use.reset_index(drop=True, inplace=True)
+        return df_use
+    elif season == 'spring':
+        for ax in axs:
+            #  ax.set_ylim([0,35.0])
+            ax.set_xlim([0,23])
+        df_use = df_use.iloc[72:97,:]
+        df_use.reset_index(drop=True, inplace=True)
+        return df_use
+    elif season == 'summer and winter':
+        for ax in axs:
+            #  ax.set_ylim([0,45.0])
+            ax.set_xlim([0,23])
+        df_use2 = df_use.iloc[48:72,:]
+        df_use2.reset_index(drop=True, inplace=True)
+        df_use = df_use.iloc[0:24,:]
+        return df_use, df_use2
+
+    
+   
+    
 def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs): 
     """ 
     produces plots to compare the means of clusters using the DTW algorithm with
@@ -801,7 +858,8 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
     """
 
     #  cluster_file = 'rename_clusters_by_season.csv'
-    cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
+    #  cluster_file = f'../5_clusters_output/{n_clusters}_clusters_DTW_results_scaled_summer.csv'
+    #  cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
     df_cluster = pd.read_csv(cluster_file,
                              usecols=[1,2],
                             header=0,
@@ -836,49 +894,13 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
                             sharex=sharex,
                             sharey=sharey,
                             layout='constrained')
-    if kwargs['period']:
-        if kwargs['period'] == 'year':
-            df_use = groupby_year(df_use)
-            for ax in axs:
-                ax.set_xlim([0,23])
-                #  ax.set_ylim([0,45.0])
-        elif kwargs['period'] == 'month':
-            df_use = groupby_month(df_use)
-            for ax in axs:
-                ax.set_xlim([0,287])
-                #  ax.set_ylim([0,45.0])
-        elif kwargs['period'] == 'season':
-            df_use = groupby_season(df_use)
-            for ax in axs:
-                ax.set_xlim([0,95])
-                #  ax.set_ylim([0,45.0])
+    if kwargs:
+        if 'period' in kwargs.keys():
+            df_use = by_period(kwargs['period'], df_use, axs)
 
-    if kwargs['season']:
-        season = kwargs['season']
-        if season == 'summer':
-            for ax in axs:
-                #  ax.set_ylim([0,45.0])
-                ax.set_xlim([0,23])
-            df_use = df_use.iloc[0:24,:]
-        elif season == 'autumn':
-            for ax in axs:
-                #  ax.set_ylim([0,35.0])
-                ax.set_xlim([0,23])
-            df_use = df_use.iloc[24:48,:]
-            df_use.reset_index(drop=True, inplace=True)
-        elif season == 'winter':
-            for ax in axs:
-                #  ax.set_ylim([0,35.0])
-                ax.set_xlim([0,23])
-            df_use = df_use.iloc[48:72,:]
-            df_use.reset_index(drop=True, inplace=True)
-        elif season == 'spring':
-            for ax in axs:
-                #  ax.set_ylim([0,35.0])
-                ax.set_xlim([0,23])
-            df_use = df_use.iloc[72:97,:]
-            df_use.reset_index(drop=True, inplace=True)
-#
+        if 'season' in kwargs.keys():
+            df_use = by_season(kwargs['season'], df_use, axs)
+
     #  df_cluster.filter(items = [f'{season} Cluster'])
     clusters = list(range(n_clusters))
     fontsize = 18
@@ -888,20 +910,30 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
                      'Dominant Early Morning',
                      'Dominant Evening',
                      'Dominant Morning']
-    ylims = [30, 20, 45, 25, 35]
+
+    markers = ['o', 'v', '<', 's', 'D']
+    ylims = [40, 30, 55, 35, 45]
 
     for c in clusters:
         cluster = [str(x) for x in df_cluster[df_cluster['DBA cluster'] == c].index.to_list()]
         #  cluster = [str(x) for x in df_cluster[df_cluster[f'{season} Cluster'] == c].index.to_list()]
         df_use_c =  df_use.filter(items=cluster)
+        df_use_cw = df_use2.filter(items=cluster)
         total = df_use_c.sum(axis=1)
         average = df_use_c.mean(axis=1)
+        averagew = df_use_cw.mean(axis=1)
         peak = np.round(average.max(), 1)
         peakx = average.idxmax()
         #  for i in df_use_c.columns:
             #  i = str(i)
         #  axs[c].plot(df_use_c.index, df_use_c.iloc[:,278], c='grey')
-        axs[c].plot(df_use_c.index, average, "o-", c=cluster_colors[c], linewidth=3)
+        axs[c].plot(df_use_c.index, average, marker=markers[c],
+                    c=cluster_colors[c], linewidth=3, label='summer demand')
+        #  if season == 'summer and winter':
+            #  axs[c].plot(df_use_c.index, averagew, marker=markers[c],
+                        #  linestyle='dotted', c=cluster_colors[c], linewidth=3,
+                        #  label='winter demand')
+            #  axs[c].legend(loc='upper left')
         axs[c].tick_params(axis='x', labelsize=16)
         axs[c].tick_params(axis='y', labelsize=16)
         axs[c].annotate(f'{cluster_names[c]}', 
@@ -909,13 +941,20 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
                         ha='right', va='top', 
                         fontsize=16
                         )
-        axs[c].annotate(f'{peak}', xy=(peakx,peak), fontsize=14)
+        #  axs[c].annotate(f'{peak}', xy=(peakx,peak), fontsize=14)
         #  axs[c].set_ylim([0, ylims[c]])
     fig.supxlabel('Time (hr)', fontsize=fontsize)
     fig.supylabel('Volume (gallons)', fontsize=fontsize)
+    #  summer_line = mlines.Line2D([], [], color='black', label='Summer',
+                                #  linewidth=3)
+    #  winter_line = mlines.Line2D([], [], color='black', linestyle='dashed',
+                                #  linewidth=3, label='Winter')
+    #  fig.legend(handles=[summer_line, winter_line])
     #  fig.suptitle(f'{season}')
     plt.show()
     #  fig.savefig(f'../5_clusters_output/5_clusters_average_{season}_2.png')
+
+cluster_summary_plots(5, 1, period='year')
 
 def combine_season_clusters():
     year_clusters = pd.read_csv('../5_clusters_output/5_results_euclidean_dtw1.csv', 
@@ -929,6 +968,7 @@ def combine_season_clusters():
     df_season = pd.DataFrame(season_clusters)
     df = pd.concat([df_year, df_season], axis=1, join='inner')
     df.to_csv('../5_clusters_output/year_season_cluster.csv')
+    return df
 
 def prep_sankay():
     data = pd.read_csv('../5_clusters_output/year_season_cluster.csv', header=0,
@@ -1228,15 +1268,16 @@ def lot_cluster_hist(n_clusters):
     lot_df = pd.read_csv(f'../5_clusters_output/cluster_lot_info_parcel_size.csv')
     lot_df['SQFTmain'] = lot_df['SQFTmain'].replace(0, np.NaN)
     lot_df.dropna(subset=['SQFTmain'], inplace=True)
-    atts = ['EffectiveYearBuilt', 
+    atts = [#'EffectiveYearBuilt', 
             'SQFTmain', 
             #  'Bedrooms',
             #  'Bathrooms',
             'TotalValue',
-            'Shape_Area']
+            #'Shape_Area'
+    ]
     colors = ['red', 'yellowgreen', 'teal', 'lightsteelblue'] 
     fig, axs = plt.subplots(len(atts), n_clusters)#, tight_layout=True)#, sharey=True)
-    #  n_bins = [15, 15, 15, 5]
+    n_bins = [21, 21, 21, 21]
     for a, att in enumerate(atts):
         #  fig, axs = plt.subplots(1, n_clusters, tight_layout=True, sharey=True)
         for i in range(n_clusters):
@@ -1244,8 +1285,8 @@ def lot_cluster_hist(n_clusters):
             xmax = lot_df[att].max()
             cluster_lot = lot_df.loc[lot_df['DBA cluster'] == i]
             axs[a][i].hist(cluster_lot[att], 
-                        #  bins=n_bins[a],
-                        #  range=(xmin, xmax),
+                        bins=n_bins[a],
+                        range=(xmin, xmax),
                         density=True, 
                         color = colors[a],
                         #  color=cluster_colors[i],
@@ -1266,7 +1307,6 @@ def lot_cluster_hist(n_clusters):
         #  fig.supxlabel(f'{att}')
     fig.supylabel('Probability density', fontsize=16)
     plt.show()
-
 def cluster_lot(n_clusters, radius):
     cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
     cluster_data = pd.read_csv(cluster_file, 
@@ -1324,7 +1364,7 @@ def census_trends():
             x = df[att]
             y = df[c]
             slope, intercept, r_value, p_value, std_err = stats.linregress(x,y)
-            if r_value**2 > 0.1:
+            if r_value**2 > 0.088:
                 cl.append(c) 
                 res.append((intercept, slope))
         for i, c in enumerate(cl):
@@ -1348,19 +1388,22 @@ def census_trends():
         lab.append(labels)
     hand_flat = [x for xs in hand for x in xs]
     lab_flat = [x for xs in lab for x in xs]
-    handles_unique = list(set(hand_flat))
-    labels_unique = list(set(lab_flat))
-
+    hand_lab = list(zip(hand_flat, lab_flat))
+    unique_handles_labels = []
+    seen_values = set()
+    for i in hand_lab:
+        if i[1] not in seen_values:
+            seen_values.add(i[1])
+            unique_handles_labels.append(i)
+    handles_unique, labels_unique = list(zip(*unique_handles_labels))
     #  DEM_line = mlines.Line2D([], [], color='blue', marker='*',
                           #  markersize=15, label='Blue stars')
-
     fig.legend(handles_unique, 
                labels_unique, 
                loc='outside upper center',
                fontsize=14,
                ncols=len(labels_unique))
     plt.show()
-
 #  def cluster_stacked_use(n_clusters, radius, period='year', operation='percent'):
     #  clusters = list(range(n_clusters))
     #  fontsize = 16
@@ -1560,7 +1603,6 @@ def compare_dba_results():
         dfs.append(df)
     df_concat = pd.concat(dfs, axis=1, join='inner')
     df_concat.to_csv('5_clusters_DTW_results_comps.csv')
-compare_dba_results()
 # for elasticity regression:
 
 def calc_average_price():
