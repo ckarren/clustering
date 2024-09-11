@@ -1560,7 +1560,7 @@ def compare_dba_results():
         dfs.append(df)
     df_concat = pd.concat(dfs, axis=1, join='inner')
     df_concat.to_csv('5_clusters_DTW_results_comps.csv')
-compare_dba_results()
+
 # for elasticity regression:
 
 def calc_average_price():
