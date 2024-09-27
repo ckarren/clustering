@@ -870,6 +870,7 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
     df_use = pd.concat([df_use1, df_use2], join='inner')
     #  df_use1 = clean_outliers(df_use1)
     #  df_use2 = clean_outliers(df_use2)
+
     df_use = clean_outliers(df_use)
     df_use = df_use.multiply(7.48).round(2)
 
@@ -952,9 +953,7 @@ def cluster_summary_plots(n_clusters, radius, vertical=True, **kwargs):
     #  fig.legend(handles=[summer_line, winter_line])
     #  fig.suptitle(f'{season}')
     plt.show()
-    #  fig.savefig(f'../5_clusters_output/5_clusters_average_{season}_2.png')
 
-cluster_summary_plots(5, 1, period='year')
 
 def combine_season_clusters():
     year_clusters = pd.read_csv('../5_clusters_output/5_results_euclidean_dtw1.csv', 
