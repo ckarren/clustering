@@ -29,20 +29,12 @@ cluster_colors_dict = {'DLN': 'cornflowerblue',
                        'DM': 'mediumorchid'}
 
 # for dashboard 
-def tot_col(dfx):
-    dfx['Total'] = dfx.sum(axis=1) 
-    return dfx
-
 def pp_use(dfx, filter):
     dfx = dfx.reindex(filter, axis=1)
     dfx = dfx.loc[:, dfx.any()]
     dfx = tot_col(dfx)
     return dfx
     
-def avg_col(dfx):
-    dfx['AverageAll'] = dfx.mean(axis=1)
-    return dfx
-
 def unique(listx):
     uni_list = []
     for x in listx:
@@ -56,13 +48,6 @@ def total_df(file):
     xl = np.array([[x for x in df.sum().values]])
     df2 = pd.DataFrame(xl, columns = df.columns)
     return df2 
-
-def conc_df(dfa, dfb):
-    dfc = pd.concat([dfa, dfb])
-    return dfc.fillna(0)
-
-def bim_use(dfx):
-    return dfx.sum(axis=0)
 
 def billed_18(q):
     p = 17.69
@@ -163,19 +148,6 @@ def clean_outliers(df, lb=1.0, ub=400.0, ll=-10.0):
     df = df[df.columns[~((df > ub).any(axis=0))]]
     df = df[df.columns[~((df < ll).any(axis=0))]]
     return df
-
-def summary(df):
-    a = stats.describe(df, axis=0)
-    return a
-
-def q1(dfx):
-    return dfx.quantile(0.25)
-
-def q2(dfx):
-    return dfx.quantile(0.5)
-
-def q3(dfx):
-    return dfx.quantile(0.75)
 
 def quant(dfx, col, qn):
     new_col = 'Q' + str(col)
@@ -505,38 +477,24 @@ def cluster_hourly_heatmap():
     clusters = df_normal.iloc[:-1,:]
     total = df_normal.iloc[-1:,:]
     fig, axs = plt.subplots(nrows=2, ncols=1, sharex=True)
-    #  ax2.pcolormesh(clusters)
     im1 = axs[0].imshow(clusters) 
-    #  ax2.xaxis.set_ticklabels([])
-    #  ax2.yaxis.set_ticklabels(['1', '2', '3', '4', '5'])
-    #  ax1.set_yticks(np.arange(len(df.index)-1), ['1', '2', '3', '4', '5'])
     axs[0].set_yticks(np.arange(len(df.index)-1), ['DLN', 'SMD', 'DEM', 'DE',
                                                 'DM'])
     axs[0].set_ylabel('Cluster', fontsize=16)
     axs[0].tick_params(labelsize=14)
     axs[0].xaxis.set_ticklabels([])
-    #  ax1.pcolormesh(total)
     im2 = axs[1].imshow(total)
     axs[1].yaxis.set_ticklabels([])
     axs[1].tick_params(labelsize=14)
     axs[1].set_xlabel('Time (hr)', fontsize=16)
     axs[1].set_ylabel('Total', fontsize=16)
 
-    #  divider = VBoxDivider(
-        #  fig, 111,
-        #  horizontal=[Size.AxesX(ax1), Size.Scaled(1), Size.AxesX(ax2)],
-        #  vertical=[Size.AxesY(ax1), Size.Fixed(pad), Size.AxesY(ax2)])
-#
-    #  ax1.set_axes_locator(divider.new_locator(0))
-    #  ax2.set_axes_locator(divider.new_locator(2))
-    #  fig.colorbar(im1, ax=ax1, location='bottom', label='Volume (gallons)')
     cbar = fig.colorbar(im1, ax=axs[1], orientation='horizontal')
     cbar.ax.tick_params(labelsize=14)
     plt.show()
 
 def cluster_hourly_heatmap_ind(n_clusters, radius):
     cluster_file = f'../RadiusComps/{n_clusters}_DTW_results_scaled_r{radius}.csv'
-    #  cluster_file = f'../RadiusComps/{n_clusters}_euclidean_results_dtw{radius}.csv'
     df_cluster = pd.read_csv(cluster_file,
                              usecols=[1,2],
                             header=0,
@@ -722,23 +680,21 @@ def cluster_summary(n_clusters, radius, **kwargs):
         df_use_all_c =  df_use_all.filter(items=cluster)
         df_use_y1_c =  df_use1.filter(items=cluster)
         df_use_y2_c =  df_use2.filter(items=cluster)
-        #  total[f'{cluster_names[c]}']['All'] = np.round(
-                                                #  df_use_all_c.sum(axis=1).sum(axis=0), 3)
-        #  total[f'{cluster_names[c]}']['Y1'] = np.round(
-                                                #  df_use_y1_c.sum(axis=1).sum(axis=0), 3)
-        #  total[f'{cluster_names[c]}']['Y2'] = np.round(
-                                                #  df_use_y2_c.sum(axis=1).sum(axis=0), 3)
+         total[f'{cluster_names[c]}']['All'] = np.round(
+                                               df_use_all_c.sum(axis=1).sum(axis=0), 3)
+         total[f'{cluster_names[c]}']['Y1'] = np.round(
+                                               df_use_y1_c.sum(axis=1).sum(axis=0), 3)
+         total[f'{cluster_names[c]}']['Y2'] = np.round(
+                                               df_use_y2_c.sum(axis=1).sum(axis=0), 3)
         average[f'{cluster_names[c]}']['All'] = np.round(
                                                 df_use_all_c.mean(axis=1).mean(), 3)
         average[f'{cluster_names[c]}']['Y1'] = np.round(
                                                 df_use_y1_c.mean(axis=1).mean(), 3)
         average[f'{cluster_names[c]}']['Y2'] = np.round(
                                                 df_use_y2_c.mean(axis=1).mean(), 3)
-        #  average.to_csv(f'{n_clusters}_c{c}_average_all2.csv')
-        #  total.to_csv(f'{n_clusters}_c{c}_total_all2.csv')
-    #  total_df = pd.DataFrame(total)
+    total_df = pd.DataFrame(total)
     average_df = pd.DataFrame(average)
-    #  total_df.to_csv('total_use_by_cluster.csv')
+    total_df.to_csv('total_use_by_cluster.csv')
     average_df.to_csv('average_use_by_cluster.csv')
 
 def plot_inertia():
@@ -751,6 +707,7 @@ def plot_inertia():
     ax.set_ylabel('Inertia', fontsize=18)
     ax.tick_params(labelsize=14)
     plt.show()
+    
 def join_seasons():
     summer_data = pd.read_csv('../5_clusters_output/5_clusters_DTW_results_scaled_summer.csv',
                             usecols=[1,2],
@@ -1002,22 +959,6 @@ def combine_season_clusters():
     df.to_csv('../5_clusters_output/year_season_cluster.csv')
     return df
 
-def prep_sankey():
-    data = pd.read_csv('../5_clusters_output/year_season_cluster.csv', header=0,
-                       index_col=0)
-    df = pd.DataFrame(data)
-    for n in df.iloc[:,0].unique():
-        x0 = len(df[df.iloc[:,0] == n])
-    #  x0 = df[:,0].value_counts()
-        #  for i in df[df[]]
-    #  for c, col in enumerate(df.columns):
-        #  x0 = df[col].value_counts()
-        #  for i in x0.index:
-            #  print(i)
-            #  breakpoint()
-        #  x1 = []
-        #  for i in range(5):
-            #  x1 = df[df[col] == i].iloc[:,c+1].value_counts()
 def plot_sankey_su_wi():
 
     fig = go.Figure(data=[go.Sankey(
@@ -1171,6 +1112,7 @@ def plot_sankey():
 
     fig.update_layout(title_text="Basic Sankey Diagram", font_size=10)
     fig.show()   
+    
 def add_parcel_size():
     lot = pd.read_csv(f'../5_clusters_output/cluster_lot_info.csv')
     lot_df = pd.DataFrame(lot)
