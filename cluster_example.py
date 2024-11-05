@@ -10,16 +10,16 @@ seed = 0
 n_clusters = 4
 numpy.random.seed(seed)
 
-file_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/InputFiles/')
+file_path = str('../InputFiles/')
 use_file = file_path + 'y1_SFR_hourly.pkl'
 
 use_df = pd.read_pickle(use_file)
 use_df = ut.clean_outliers(use_df)
-#  use_df = use_df.sample(1800, axis=1, random_state=1)
+
 X_train = ut.groupby_year(use_df)
 X_train = X_train.T
 X_train = to_time_series_dataset(X_train)
-#  X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
+X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
 sz = X_train.shape[1]
 
 # Euclidean k-means
@@ -110,8 +110,9 @@ df = pd.DataFrame(list(zip(list(use_df.columns),
                            kernel_km.labels_)),
                   columns=['User', 'k-means cluster', 'DBA cluster', 
                            'SoftDTW cluster', 'Kernel k-means cluster'])
-df.to_csv(f'{n_clusters}_compare_n1800_year.csv')
+
+df.to_csv(f'{n_clusters}_compare.csv')
 
 plt.tight_layout()
-plt.savefig(f'compare_metrics_{n_clusters}_n1800_season.png')
-#  plt.show()
+plt.savefig(f'compare_metrics_{n_clusters}.png')
+plt.show()
