@@ -16,6 +16,9 @@ import matplotlib.ticker as ticker
 import pandas as pd 
 import os
 
+from tslearn.utils import to_time_series_dataset
+from tslearn.clustering import TimeSeriesKMeans, silhouette_score
+from tslearn.preprocessing import TimeSeriesScalerMeanVariance
 cluster_colors = ['cornflowerblue',
                   'darkorange',
                   'forestgreen',
@@ -28,109 +31,6 @@ cluster_colors_dict = {'DLN': 'cornflowerblue',
                        'DE': 'tomato',
                        'DM': 'mediumorchid'}
 
-# for dashboard 
-def pp_use(dfx, filter):
-    dfx = dfx.reindex(filter, axis=1)
-    dfx = dfx.loc[:, dfx.any()]
-    dfx = tot_col(dfx)
-    return dfx
-    
-def unique(listx):
-    uni_list = []
-    for x in listx:
-        if x not in uni_list:
-            uni_list.append(x)
-    return uni_list
-
-def total_df(file):
-    data = pd.read_csv(file, index_col=0, parse_dates=True)
-    df = pd.DataFrame(data)
-    xl = np.array([[x for x in df.sum().values]])
-    df2 = pd.DataFrame(xl, columns = df.columns)
-    return df2 
-
-def billed_18(q):
-    p = 17.69
-    if q < 400:
-        p += 0 
-    elif q >= 400:
-        p += (q - 400) / 100  * 3.50
-    return round(p * 1.03, 2) 
-
-def billed_19(q):
-    p = 18.40
-    if q < 300:
-        p += 0 
-    elif 300 <= q < 400:
-        p += (q - 300) / 100 * 2.89
-    elif q >= 400: 
-        p = p + 2.89 + (q - 400) / 100 * 3.50
-    return round(p * 1.03, 2)  
-
-def qFilter(xcol, miudf, q):
-    """returns: q number of lists of MiuIds for specified attribute 'xcol' """
-    new_xcol = 'Q' + str(xcol)
-    miudf = quant(miudf, xcol, q)
-    quantile_list = [miu_desc_filter(miudf, new_xcol, i) for i in range(q)]
-    return quantile_list
-
-def dfFilter(qlist, usedf):
-    """returns list of DataFrames"""
-    dflist = [usedf.reindex(i, axis=1) for i in qlist]
-    return dflist
-
-def newDF(dflist):
-    """returns 1 DataFrame with the average hourly demand of each quantile group"""
-    dic = {}
-    ind = dflist[0].index
-    for i, item in enumerate(dflist):
-        item['Average'] = item.mean(numeric_only=True, axis=1)
-        k = 'q' + str(i+1) + 'ave'
-        dic[k] = item['Average']
-
-    new_df = pd.DataFrame(dic, index = ind)
-    return new_df
-
-def peakDF(dflist):
-    """returns a list of lists of indexes of peak hourly values for each quantile  """
-    pl = []
-    for i, item in enumerate(dflist):
-        tdf = tot_col(item)
-        thu = tdf['Total']
-        pl.append(thu.groupby(thu.index.date).idxmax())
-    return pl
-
-def miu_desc_filter(miu_dataframe, filter_type1, filter_value1):
-    """
-    miu_dataframe:: Pandas DataFrame
-    filter_type:: Str
-    filter_value:: Str
-    """
-    mdf = miu_dataframe.copy()
-    filtered_data = mdf.loc[(mdf[filter_type1] == filter_value1)]#, mdf.index].to_list()
-    data_list = [str(x) for x in filtered_data.index]
-    return data_list
-
-def miu_filter(miu_dataframe, filter_type, filter_value):
-    """
-    miu_dataframe: Pandas DataFrame
-    filter_type: Str
-    filter_value: Str
-    ret_column: the column(s) to return in the filtered output
-    """
-    mdf = miu_dataframe.copy()
-    filtered_data = mdf[(mdf[filter_type] == filter_value)]
-    return filtered_data
-
-def miu_range_filter(miu_dataframe, filter_type1, fil_val1_lo, fil_val1_hi):
-    mdf = miu_dataframe.copy()
-    filtered_data = mdf.loc[(mdf[filter_type1] > fil_val1_lo) & (mdf[filter_type1] < fil_val1_hi), 'MiuId'].to_list()
-    data_list = [str(x) for x in filtered_data]
-    return data_list
-
-def combine_filters(fd1, fd2):
-    c = [str(value) for value in fd1 if value in fd2]
-    return c
 
 def clean_outliers_sd(df):
     df = df[df.columns[(np.abs(stats.zscore(df, axis=1)) < 3).all(axis=0)]]
@@ -183,15 +83,61 @@ def annotate_axes(ax, text, fontsize=18):
             ha='center', va='center', fontsize=fontsize, color='black')
 
 # for clustering:
-def pickle_feature(input_path, output_path):
-    for i in range(1,7):
-        for j in range(1,3):
-            file = f'hourly_use_SFR_y{j}_p{i}.pkl'
-            df = pd.read_pickle(input_path + file)
-            week_df = df.groupby([df.index.weekday, df.index.hour]).mean()
-            print(f'Writing PDH_SFR_Y{j}P{i}.pkl file')
-            week_df.to_pickle(output_path + f'PDH_SFR_Y{j}P{i}.pkl')
 
+def perform_clustering(data, n_clusters, **kwargs):
+    X1_train = to_time_series_dataset(data)
+    X1_train = TimeSeriesScalerMeanVariance().fit_transform(X1_train)
+    
+    metric = "dtw"
+    max_iter_barycenter = 100
+    seed = 0
+    metric_params = None
+    n_init = 5
+    
+    if kwargs:
+        if "scaler" in kwargs:
+            if kwargs["scaler"] == "mean":
+                X1_train = TimeSeriesScalerMeanVariance().fit_transform(X1_train)
+            elif kwargs["scaler"] == "minmax":
+                X1_train = TimeSeriesScalerMinMax().fit_transform(X1_train)
+            elif kwargs["scaler"] == "resample":
+                X1_train = TimeSeriesResampler().fit_trainsfrom(X1_train)
+
+        if "metric" in kwargs:
+            metric = kwargs["metric"]
+
+        if "max_iter_barycenter" in kwargs:
+            max_iter_barycenter = kwargs["max_iter_barycenter"]
+
+        if "n_init" in kwargs:
+            n_init = kwargs["n_init"]
+
+        if "random_seed" in kwargs:
+            seed = kwargs["random_seed"]
+
+        if "cluster_window" in kwargs:
+            cluster_window = kwargs["cluster_window"]
+            cluster_param = {'global_constraint':'sakoe_chiba',
+                            'sakoe_chiba_radius':cluster_window}
+
+    np.random.seed(seed)
+    
+    labels = []
+    for cluster in n_clusters:
+        dba_km = TimeSeriesKMeans(n_clusters=cluster,
+                                    n_init=n_init,
+                                    metric=metric,
+                                    max_iter_barycenter=max_iter_barycenter,
+                                    random_state=seed,
+                                    verbose=True,
+                                    metric_params=metric_params,
+                                    n_jobs=-1
+                              ).fit(X1_train)
+        labels.append(dba_km.labels_)
+    return labels
+
+        
+        
 def split_week(df):
     weekdays = df.loc[df.index.weekday.isin([0,1,2,3,4])]
     weekends = df.loc[df.index.weekday.isin([5,6])]
@@ -680,18 +626,12 @@ def cluster_summary(n_clusters, radius, **kwargs):
         df_use_all_c =  df_use_all.filter(items=cluster)
         df_use_y1_c =  df_use1.filter(items=cluster)
         df_use_y2_c =  df_use2.filter(items=cluster)
-         total[f'{cluster_names[c]}']['All'] = np.round(
-                                               df_use_all_c.sum(axis=1).sum(axis=0), 3)
-         total[f'{cluster_names[c]}']['Y1'] = np.round(
-                                               df_use_y1_c.sum(axis=1).sum(axis=0), 3)
-         total[f'{cluster_names[c]}']['Y2'] = np.round(
-                                               df_use_y2_c.sum(axis=1).sum(axis=0), 3)
-        average[f'{cluster_names[c]}']['All'] = np.round(
-                                                df_use_all_c.mean(axis=1).mean(), 3)
-        average[f'{cluster_names[c]}']['Y1'] = np.round(
-                                                df_use_y1_c.mean(axis=1).mean(), 3)
-        average[f'{cluster_names[c]}']['Y2'] = np.round(
-                                                df_use_y2_c.mean(axis=1).mean(), 3)
+        total[f'{cluster_names[c]}']['All'] = np.round(df_use_all_c.sum(axis=1).sum(axis=0), 3)
+        total[f'{cluster_names[c]}']['Y1'] = np.round(df_use_y1_c.sum(axis=1).sum(axis=0), 3)
+        total[f'{cluster_names[c]}']['Y2'] = np.round(df_use_y2_c.sum(axis=1).sum(axis=0), 3)
+        average[f'{cluster_names[c]}']['All'] = np.round(df_use_all_c.mean(axis=1).mean(), 3)
+        average[f'{cluster_names[c]}']['Y1'] = np.round(df_use_y1_c.mean(axis=1).mean(), 3)
+        average[f'{cluster_names[c]}']['Y2'] = np.round(df_use_y2_c.mean(axis=1).mean(), 3)
     total_df = pd.DataFrame(total)
     average_df = pd.DataFrame(average)
     total_df.to_csv('total_use_by_cluster.csv')
