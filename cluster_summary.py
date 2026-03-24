@@ -1,14 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import pandas as pd
-import matplotlib.pyplot as plt
-import utils as ut
-from utils import cluster_lot
-import numpy as np
+import os
 
-n_clusters = 5
-radius = 1
-fontsize = 18
+import config
+import pandas as pd
+import numpy as np
 
 #  atts = ['EffectiveYearBuilt', 'SQFTmain', 'Bedrooms', 'Bathrooms', 'TotalValue']
 
@@ -21,7 +17,7 @@ fontsize = 18
 #  lot_summary_stat = lot_df[atts].describe()
 #  lot_summary_stat.to_csv('all_summary_stats.csv')
 #  lot_df = cluster_lot(n_clusters=n_clusters, radius=radius)
-lot_file = pd.read_csv('../5_clusters_output/cluster_lot_info_parcel_size.csv', 
+lot_file = pd.read_csv(os.path.join(os.path.expanduser(config.OUTPUT_PATH), 'cluster_lot_info_parcel_size.csv'),
                        usecols=[1,5,7,8,9,10,14,19,21])
 lot_df = pd.DataFrame(lot_file)
 lot_df['SQFTmain'] = lot_df['SQFTmain'].replace(0, np.NaN)
@@ -45,12 +41,26 @@ lot_df['SpecificUseDetail2'] = lot_df['SpecificUseDetail2'].map({'Pool':1,
     #  fig.supylabel('Probability density')
     #  plt.show()
 
-grouped = lot_df.groupby('DBA cluster')[['EffectiveYearBuilt',
-                                         'SQFTmain',
-                                         'Bedrooms',
-                                         'Bathrooms',
-                                         'TotalValue',
-                                         'Shape_Area']].agg(['max', 'min',
-                                                            'mean', 'median'])
-pools = lot_df.groupby('DBA cluster')[['SpecificUseDetail2']].sum()
-grouped.to_csv('5_clusters_summary_stats_parcel_median.csv')
+
+
+class ClusterSummaryRunner:
+    def __init__(self):
+        self.lot_df = lot_df
+        self.output_path = os.path.expanduser(config.OUTPUT_PATH)
+        os.makedirs(self.output_path, exist_ok=True)
+
+    def run(self):
+        grouped = self.lot_df.groupby('DBA cluster')[[
+            'EffectiveYearBuilt',
+            'SQFTmain',
+            'Bedrooms',
+            'Bathrooms',
+            'TotalValue',
+            'Shape_Area',
+        ]].agg(['max', 'min', 'mean', 'median'])
+        output_file = os.path.join(self.output_path, 'cluster_summary_stats_parcel_median.csv')
+        grouped.to_csv(output_file)
+
+
+if __name__ == '__main__':
+    ClusterSummaryRunner().run()
