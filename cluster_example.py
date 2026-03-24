@@ -1,117 +1,98 @@
-import numpy
-import pandas as pd
-import utils as ut
 import matplotlib.pyplot as plt
-from tslearn.utils import to_time_series_dataset
-from tslearn.clustering import TimeSeriesKMeans, KernelKMeans, silhouette_score
-from tslearn.preprocessing import TimeSeriesScalerMeanVariance
+import numpy as np
+import os
+import pandas as pd
+from tslearn.clustering import KernelKMeans
 
-seed = 0
-n_clusters = 4
-numpy.random.seed(seed)
+import config
+import utils as ut
+from clustering_engine import ClusteringConfig, TimeSeriesClusterer
+from data import DataLoader
+from visualizer import ClusterPlotter
 
-file_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/InputFiles/')
-use_file = file_path + 'y1_SFR_hourly.pkl'
 
-use_df = pd.read_pickle(use_file)
-use_df = ut.clean_outliers(use_df)
-#  use_df = use_df.sample(1800, axis=1, random_state=1)
-X_train = ut.groupby_year(use_df)
-X_train = X_train.T
-X_train = to_time_series_dataset(X_train)
-#  X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
-sz = X_train.shape[1]
+class ClusterExampleRunner:
+    def __init__(self, n_clusters=4, seed=config.DEFAULT_SEED):
+        self.n_clusters = n_clusters
+        self.seed = seed
+        np.random.seed(seed)
+        self.loader = DataLoader()
+        self.output_path = os.path.expanduser(config.OUTPUT_PATH)
+        os.makedirs(self.output_path, exist_ok=True)
 
-# Euclidean k-means
-print("Euclidean k-means")
-km = TimeSeriesKMeans(n_clusters=n_clusters, 
-                      verbose=True, 
-                      random_state=seed)
-y_pred = km.fit_predict(X_train)
+    def _training_frame(self):
+        use_df = self.loader.load_water_use('y1_SFR_hourly.pkl', clean=True)
+        return use_df, ut.groupby_year(use_df).T
 
-plt.figure()
-for yi in range(n_clusters):
-    plt.subplot(4, n_clusters, yi + 1)
-    for xx in X_train[y_pred == yi]:
-        plt.plot(xx.ravel(), "k-", alpha=.2)
-    plt.plot(km.cluster_centers_[yi].ravel(), "r-")
-    plt.xlim(0, sz)
-    plt.ylim(0,55)
-    plt.text(0.55, 0.85,'Cluster %d' % (yi + 1),
-             transform=plt.gca().transAxes)
-    if yi == 1:
-        plt.title("Euclidean $k$-means")
+    def run(self):
+        use_df, train_frame = self._training_frame()
+        ClusterPlotter.new_figure(rows=4, cols=self.n_clusters)
 
-# DBA-k-means
-print("DBA k-means")
-dba_km = TimeSeriesKMeans(n_clusters=n_clusters,
-                          n_init=2,
-                          metric="dtw",
-                          verbose=True,
-                          max_iter_barycenter=20,
-                          random_state=seed)
-y_pred = dba_km.fit_predict(X_train)
-#
-for yi in range(n_clusters):
-    plt.subplot(4, n_clusters, yi + n_clusters + 1)
-    for xx in X_train[y_pred == yi]:
-        plt.plot(xx.ravel(), "k-", alpha=.2)
-    plt.plot(dba_km.cluster_centers_[yi].ravel(), "r-")
-    plt.xlim(0, sz)
-    plt.text(0.55, 0.85,'Cluster %d' % (yi + 1),
-             transform=plt.gca().transAxes)
-    if yi == 1:
-        plt.title("DBA $k$-means")
-#
-#  Soft-DTW-k-means
-print("Soft-DTW k-means")
-sdtw_km = TimeSeriesKMeans(n_clusters=n_clusters,
-                           metric="softdtw",
-                           metric_params={"gamma": .01},
-                           verbose=True,
-                           random_state=seed)
-y_pred = sdtw_km.fit_predict(X_train)
-#
-for yi in range(n_clusters):
-    plt.subplot(4, n_clusters, yi + 2*n_clusters + 1)
-    for xx in X_train[y_pred == yi]:
-        plt.plot(xx.ravel(), "k-", alpha=.2)
-    plt.plot(sdtw_km.cluster_centers_[yi].ravel(), "r-")
-    plt.xlim(0, sz)
-    plt.text(0.55, 0.85,'Cluster %d' % (yi + 1),
-             transform=plt.gca().transAxes)
-    if yi == 1:
-        plt.title("Soft-DTW $k$-means")
+        e_cfg = ClusteringConfig.euclidean(self.n_clusters, random_state=self.seed, scale=False)
+        X_train, e_labels, e_model = TimeSeriesClusterer(e_cfg).fit_predict(train_frame)
+        self._draw_row(X_train, e_labels, e_model.cluster_centers_, 0, 'Euclidean $k$-means', y_limit=(0, 55))
 
-# Kernel k-means
-print("Kernel k-means")
-kernel_km = KernelKMeans(n_clusters=n_clusters, 
-                         kernel='gak', 
-                         verbose=True, 
-                         random_state=seed,
-                         kernel_params={'sigma': 'auto'},
-                         n_init=2)
-y_pred = kernel_km.fit_predict(X_train)
+        d_cfg = ClusteringConfig.dtw(
+            self.n_clusters,
+            random_state=self.seed,
+            n_init=2,
+            max_iter_barycenter=20,
+            metric_params={},
+            scale=False,
+        )
+        _, d_labels, d_model = TimeSeriesClusterer(d_cfg).fit_predict(train_frame)
+        self._draw_row(X_train, d_labels, d_model.cluster_centers_, 1, 'DBA $k$-means')
 
-for yi in range(n_clusters):
-    plt.subplot(4, n_clusters, yi + 3*n_clusters + 1)
-    for xx in X_train[y_pred == yi]:
-        plt.plot(xx.ravel(), "k-", alpha=.2)
-    plt.xlim(0, sz)
-    plt.text(0.55, 0.85,'Cluster %d' % (yi + 1),
-             transform=plt.gca().transAxes)
-    if yi == 1:
-        plt.title("Kernel $k$-means")
+        s_cfg = ClusteringConfig.softdtw(
+            self.n_clusters,
+            random_state=self.seed,
+            scale=False,
+            metric_params={},
+            gamma=0.01,
+        )
+        _, s_labels, s_model = TimeSeriesClusterer(s_cfg).fit_predict(train_frame)
+        self._draw_row(X_train, s_labels, s_model.cluster_centers_, 2, 'Soft-DTW $k$-means')
 
-df = pd.DataFrame(list(zip(list(use_df.columns), 
-                           km.labels_, 
-                           dba_km.labels_,
-                           sdtw_km.labels_,
-                           kernel_km.labels_)),
-                  columns=['User', 'k-means cluster', 'DBA cluster', 
-                           'SoftDTW cluster', 'Kernel k-means cluster'])
-df.to_csv(f'{n_clusters}_compare_n1800_year.csv')
+        k_model = KernelKMeans(
+            n_clusters=self.n_clusters,
+            kernel='gak',
+            verbose=True,
+            random_state=self.seed,
+            kernel_params={'sigma': 'auto'},
+            n_init=2,
+        )
+        k_labels = k_model.fit_predict(X_train)
+        self._draw_row(X_train, k_labels, [None] * self.n_clusters, 3, 'Kernel $k$-means')
 
-plt.tight_layout()
-plt.savefig(f'compare_metrics_{n_clusters}_n1800_season.png')
-#  plt.show()
+        self._write_results(use_df, e_model.labels_, d_model.labels_, s_model.labels_, k_model.labels_)
+        plt.tight_layout()
+        output_file = os.path.join(self.output_path, f'cluster_example_compare_metrics_k{self.n_clusters}.png')
+        plt.savefig(output_file)
+
+    def _draw_row(self, X_train, labels, centers, row, title, y_limit=None):
+        x_limit = X_train.shape[1]
+        for yi in range(self.n_clusters):
+            ax = plt.subplot(4, self.n_clusters, yi + (row * self.n_clusters) + 1)
+            center = centers[yi] if centers[yi] is not None else None
+            ClusterPlotter.draw_cluster_panel(
+                ax=ax,
+                series_dataset=X_train,
+                labels=labels,
+                center=center,
+                cluster_id=yi,
+                x_limit=x_limit,
+                y_limit=y_limit,
+                title=title if yi == 1 else None,
+            )
+
+    def _write_results(self, use_df, euclidean_labels, dba_labels, softdtw_labels, kernel_labels):
+        df = pd.DataFrame(
+            list(zip(list(use_df.columns), euclidean_labels, dba_labels, softdtw_labels, kernel_labels)),
+            columns=['User', 'k-means cluster', 'DBA cluster', 'SoftDTW cluster', 'Kernel k-means cluster'],
+        )
+        output_file = os.path.join(self.output_path, f'cluster_example_labels_k{self.n_clusters}.csv')
+        df.to_csv(output_file, index=False)
+
+
+if __name__ == '__main__':
+    ClusterExampleRunner().run()

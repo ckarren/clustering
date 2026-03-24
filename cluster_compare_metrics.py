@@ -1,64 +1,61 @@
-import pandas as pd
 import numpy as np
+import os
+import pandas as pd
+from tslearn.clustering import silhouette_score
+
+import config
 import utils as ut
-from tslearn.utils import to_time_series_dataset
-from tslearn.clustering import TimeSeriesKMeans, silhouette_score
-from tslearn.preprocessing import TimeSeriesScalerMeanVariance, \
-    TimeSeriesResampler
-from tslearn.datasets import CachedDatasets
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+from clustering_engine import ClusteringConfig, TimeSeriesClusterer
+from data import DataLoader
 
-seed = 0
-np.random.seed(seed)
 
-file_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/InputFiles/')
-use_file = file_path + 'y1_SFR_hourly.pkl'
+class ClusterCompareMetricsRunner:
+    def __init__(self, seed=config.DEFAULT_SEED):
+        self.seed = seed
+        np.random.seed(seed)
+        self.loader = DataLoader()
+        self.n_clusters = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+        self.groups = ['year', 'season', 'month']
+        self.output_path = os.path.expanduser(config.OUTPUT_PATH)
+        os.makedirs(self.output_path, exist_ok=True)
 
-use_df = pd.read_pickle(use_file)
-use_df = ut.clean_outliers(use_df)
-#  X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
-sil_coef = []
-inertia = []
-#  model = 'compare' # one of 'Kmeans', 'DBA', 'Soft-DTW', 'compare'
-#  models = ['kmeans', 'DBA', 'Soft-DTW']
-#  for model in models:
-n_init = 5
-max_iter_barycenter = 20
-n_clusters = [2, 3, 4, 5, 6, 7, 8, 9, 10]
-groups = ['year', 'season', 'month']
+    def run(self):
+        use_df = self.loader.load_water_use('y1_SFR_hourly.pkl', clean=True)
+        metrics_rows = []
+        for group in self.groups:
+            grouped = self._group(use_df, group).T
+            for n_cluster in self.n_clusters:
+                cfg = ClusteringConfig.dtw(
+                    n_cluster,
+                    radius=2,
+                    n_init=config.DEFAULT_N_INIT,
+                    max_iter_barycenter=config.DEFAULT_MAX_ITER_BARYCENTER,
+                    random_state=self.seed,
+                )
+                X_train, labels, model = TimeSeriesClusterer(cfg).fit_predict(grouped)
+                sil = silhouette_score(X_train, labels)
+                metrics_rows.append({
+                    'group': group,
+                    'n_cluster': n_cluster,
+                    'silhouette_score': sil,
+                    'inertia': model.inertia_,
+                })
 
-for group in groups:
-    if group == 'year':
-        X1_train = ut.groupby_year(use_df)#[0]
-    elif group == 'season':
-        X1_train = ut.groupby_season(use_df)
-    elif group == 'month':
-        X1_train = ut.groupby_month(use_df)
-    X1_train = X1_train.T
-    X_train = to_time_series_dataset(X1_train)
-    X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
-    for n_cluster in n_clusters:
-        dba_km = TimeSeriesKMeans(
-                    n_clusters=n_cluster,
-                    n_init=n_init,
-                    metric='dtw',
-                    verbose=True,
-                    max_iter_barycenter=max_iter_barycenter,
-                    random_state=seed,
-                    metric_params={
-                        'global_constraint': 'sakoe_chiba',
-                        'sakoe_chiba_radius': 2
-                    }
-        )
-        y_pred = dba_km.fit_predict(X_train)
-        sil_coef.append(silhouette_score(X_train, y_pred))
-        inertia.append(dba_km.inertia_)
-        df = pd.DataFrame(list(zip(list(use_df.columns), 
-                                        dba_km.labels_),
-                                columns=['User', 'DBA cluster']
-                            )
-                          )
-        df.to_csv(f'{n_cluster}_{group}_results_{scale}.csv')
+                out = pd.DataFrame(list(zip(list(use_df.columns), model.labels_)), columns=['User', 'DBA cluster'])
+                labels_file = os.path.join(self.output_path, f'cluster_compare_metrics_{group}_k{n_cluster}.csv')
+                out.to_csv(labels_file, index=False)
 
-df2 = pd.DataFrame(list(zip(sil_coef, inertia)),
+            summary_file = os.path.join(self.output_path, 'cluster_compare_metrics_summary.csv')
+            pd.DataFrame(metrics_rows).to_csv(summary_file, index=False)
+
+    @staticmethod
+    def _group(use_df, group):
+        if group == 'year':
+            return ut.groupby_year(use_df)
+        if group == 'season':
+            return ut.groupby_season(use_df)
+        return ut.groupby_month(use_df)
+
+
+if __name__ == '__main__':
+    ClusterCompareMetricsRunner().run()

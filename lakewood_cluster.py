@@ -1,25 +1,25 @@
-import pandas as pd
 import numpy as np
 from tslearn.utils import to_time_series_dataset
-from tslearn.clustering import TimeSeriesKMeans
-from tslearn.preprocessing import TimeSeriesScalerMeanVariance
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+from data import DataLoader
 
 seed = 0 
 np.random.seed(seed)
-file_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/InputFiles/')
-use_file = file_path + 'MDH_SFR_Y1P1.pkl'
-# load pickle file of selecte feature
-X_train = pd.read_pickle(use_file)
-X_train = X_train.T
-print(X_train.head())
-# convert to tslearn time series
-X_train = to_time_series_dataset(X_train)
-# pre-process data 
-#  X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
 
-print(X_train.shape)
+
+class LakewoodClusterPreview:
+    def __init__(self):
+        self.loader = DataLoader()
+
+    def run(self):
+        X_train = self.loader.load_pickle('MDH_SFR_Y1P1.pkl')
+        X_train = X_train.T
+        print(X_train.head())
+        X_train = to_time_series_dataset(X_train)
+        print(X_train.shape)
+
+
+if __name__ == '__main__':
+    LakewoodClusterPreview().run()
 #  print('Euclidean k-means')
 #  km = TimeSeriesKMeans(n_clusters=3,
                       #  metric="euclidean",
