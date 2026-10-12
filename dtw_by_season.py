@@ -1,11 +1,8 @@
+import os
+
 import pandas as pd
-import numpy as np
-import utils as ut
-import time
-import matplotlib.pyplot as plt
-from tslearn.utils import to_time_series_dataset
-from tslearn.clustering import TimeSeriesKMeans, silhouette_score
-from tslearn.preprocessing import TimeSeriesScalerMeanVariance
+
+import config
 
 #  seed = #  0
 #  np.random.seed(seed)
@@ -21,24 +18,39 @@ from tslearn.preprocessing import TimeSeriesScalerMeanVariance
 #  use_df = pd.read_pickle(use_file)
 #  use_df = ut.clean_outliers(use_df)
 #  #  use_df = use_df.sample(n=n_sample, axis=1, random_state=1)
-seasons = ['summer', 'autumn', 'winter', 'spring']
-#  #  season = 'summer'
-#  #  X1_train = ut.groupby_year(use_df)
-#  begin = time.perf_counter()
-#  X1_train = ut.groupby_season(use_df)
-#  #  X1_train = X1_train.iloc[0:24,:]
-clusters = []
-for season in seasons:
-    data = pd.read_csv(f'../5_clusters_output/5_clusters_DTW_results_scaled_{season}.csv', 
-                        usecols=[1,2], 
-                        header=0, 
-                        index_col=0)
-    df = pd.DataFrame(data)
-    df.rename(columns={'DBA cluster': f'{season} Cluster'}, inplace=True)
-    clusters.append(df)
 
-df_all = pd.concat(clusters, axis=1, join='inner')
-df_all.to_csv('5_clusters_by_season.csv')
+
+class DtwBySeasonRunner:
+    def __init__(self, n_clusters=4, seasons=None):
+        self.n_clusters = n_clusters
+        self.seasons = seasons or ['summer', 'autumn', 'winter', 'spring']
+        self.output_path = os.path.expanduser(config.OUTPUT_PATH)
+        os.makedirs(self.output_path, exist_ok=True)
+
+    def run(self):
+        clusters = []
+        for season in self.seasons:
+            input_file = os.path.join(
+                self.output_path,
+                f'compare_dtw_cluster_k{self.n_clusters}_{season}.csv',
+            )
+            data = pd.read_csv(
+                input_file,
+                usecols=[1, 2],
+                header=0,
+                index_col=0,
+            )
+            df = pd.DataFrame(data)
+            df.rename(columns={'DBA cluster': f'{season} Cluster'}, inplace=True)
+            clusters.append(df)
+
+        df_all = pd.concat(clusters, axis=1, join='inner')
+        output_file = os.path.join(self.output_path, f'dtw_by_season_k{self.n_clusters}.csv')
+        df_all.to_csv(output_file)
+
+
+if __name__ == '__main__':
+    DtwBySeasonRunner().run()
 #      X1_train = ut.groupby_season(use_df)
     #      if season == 'summer':
     #          X1_train = X1_train.iloc[0:24,:]

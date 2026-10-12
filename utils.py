@@ -159,10 +159,7 @@ def clean_outliers_sd(df):
     return df
 
 def clean_outliers(df, lb=1.0, ub=400.0, ll=-10.0):
-    df = df[df.columns[~((df < lb).all(axis=0))]]
-    df = df[df.columns[~((df > ub).any(axis=0))]]
-    df = df[df.columns[~((df < ll).any(axis=0))]]
-    return df
+    return WaterUseDataProcessor.clean_outliers(df, lb=lb, ub=ub, ll=ll)
 
 def summary(df):
     a = stats.describe(df, axis=0)
@@ -220,80 +217,88 @@ def pickle_feature(input_path, output_path):
             print(f'Writing PDH_SFR_Y{j}P{i}.pkl file')
             week_df.to_pickle(output_path + f'PDH_SFR_Y{j}P{i}.pkl')
 
+
+class WaterUseDataProcessor:
+    """Encapsulates common cleaning and demand pattern aggregations."""
+
+    def __init__(self, df):
+        self.df = df
+
+    @staticmethod
+    def clean_outliers(df, lb=1.0, ub=400.0, ll=-10.0):
+        df = df[df.columns[~((df < lb).all(axis=0))]]
+        df = df[df.columns[~((df > ub).any(axis=0))]]
+        df = df[df.columns[~((df < ll).any(axis=0))]]
+        return df
+
+    def split_week(self):
+        weekdays = self.df.loc[self.df.index.weekday.isin([0, 1, 2, 3, 4])]
+        weekends = self.df.loc[self.df.index.weekday.isin([5, 6])]
+        return weekdays, weekends
+
+    def groupby_month(self):
+        weekdays, _ = self.split_week()
+        monthly_wd = weekdays.groupby([weekdays.index.month, weekdays.index.hour]).mean()
+        monthly_wd.reset_index(drop=True, inplace=True)
+        return monthly_wd
+
+    def groupby_year(self, op='mean'):
+        weekdays, weekends = self.split_week()
+        if op == 'mean':
+            annual_wd = weekdays.groupby(weekdays.index.hour).mean()
+            annual_we = weekends.groupby(weekends.index.hour).mean()
+        elif op == 'total':
+            annual_wd = weekdays.groupby(weekdays.index.hour).sum()
+            annual_we = weekends.groupby(weekends.index.hour).sum()
+        else:
+            raise ValueError("op must be either 'mean' or 'total'.")
+
+        annual_wd.reset_index(drop=True, inplace=True)
+        annual_we.reset_index(drop=True, inplace=True)
+        return annual_wd
+
+    def groupby_season(self):
+        summer = [6, 7, 8]
+        autumn = [9, 10, 11]
+        winter = [12, 1, 2]
+        spring = [3, 4, 5]
+
+        weekdays, _ = self.split_week()
+
+        summer_wd = weekdays.loc[weekdays.index.month.isin(summer)].copy()
+        spring_wd = weekdays.loc[weekdays.index.month.isin(spring)].copy()
+        autumn_wd = weekdays.loc[weekdays.index.month.isin(autumn)].copy()
+        winter_wd = weekdays.loc[weekdays.index.month.isin(winter)].copy()
+
+        summer_wd_avg = summer_wd.groupby(summer_wd.index.hour).mean()
+        spring_wd_avg = spring_wd.groupby(spring_wd.index.hour).mean()
+        autumn_wd_avg = autumn_wd.groupby(autumn_wd.index.hour).mean()
+        winter_wd_avg = winter_wd.groupby(winter_wd.index.hour).mean()
+
+        by_season_wd = pd.concat([
+            summer_wd_avg,
+            autumn_wd_avg,
+            winter_wd_avg,
+            spring_wd_avg,
+        ])
+        by_season_wd.reset_index(drop=True, inplace=True)
+        return by_season_wd
+
 def split_week(df):
-    weekdays = df.loc[df.index.weekday.isin([0,1,2,3,4])]
-    weekends = df.loc[df.index.weekday.isin([5,6])]
-    return weekdays, weekends
+    processor = WaterUseDataProcessor(df)
+    return processor.split_week()
 
 def groupby_month(df):
-    weekdays, weekends = split_week(df)
-  
-    monthly_wd = weekdays.groupby([weekdays.index.month, 
-                                   weekdays.index.hour]).mean()
-    #  monthly_we = weekends.groupby([weekends.index.month,
-                                   #  weekends.index.hour]).mean()
-    #  monthly_we.index = monthly_we.index.map('Month: {0[0]} Hour: {0[1]}'.format)
- 
-    monthly_wd.reset_index(drop=True, inplace=True)
-    #  monthly_we.reset_index(drop=True, inplace=True)
-
-    return monthly_wd#, monthly_we
+    processor = WaterUseDataProcessor(df)
+    return processor.groupby_month()
 
 def groupby_year(df, op='mean'):
-    weekdays, weekends = split_week(df)
-
-    if op == 'mean':
-        annual_wd = weekdays.groupby(weekdays.index.hour).mean()
-        annual_we = weekends.groupby(weekends.index.hour).mean()
-    elif op == 'total':
-        annual_wd = weekdays.groupby(weekdays.index.hour).sum()
-        annual_we = weekends.groupby(weekends.index.hour).sum()
-
-
-    annual_wd.reset_index(drop=True, inplace=True)
-    annual_we.reset_index(drop=True, inplace=True)
-
-    return annual_wd#, annual_we
+    processor = WaterUseDataProcessor(df)
+    return processor.groupby_year(op=op)
 
 def groupby_season(df):
-    #  seasons = df.groupby(df.index).resample('QS-DEC').mean()
-    summer = [6,7,8]
-    autumn = [9,10,11]
-    winter = [12,1,2]
-    spring = [3,4,5]
-
-    weekdays, weekends = split_week(df)
-
-    summer_wd = weekdays.loc[weekdays.index.month.isin(summer)].copy()
-    #  summer_we = weekends.loc[weekends.index.month.isin(summer)]
-    spring_wd = weekdays.loc[weekdays.index.month.isin(spring)].copy()
-    #  spring_we = weekends.loc[weekends.index.month.isin(spring)]
-    autumn_wd = weekdays.loc[weekdays.index.month.isin(autumn)].copy()  
-    #  autumn_we = weekends.loc[weekends.index.month.isin(spring)]
-    winter_wd = weekdays.loc[weekdays.index.month.isin(winter)].copy()  
-    #  winter_we = weekends.loc[weekends.index.month.isin(spring)]
-
-    summer_wd_avg = summer_wd.groupby(summer_wd.index.hour).mean()
-    #  summer_we_avg = summer_we.groupby(summer_we.index.hour).mean()
-    spring_wd_avg = spring_wd.groupby(spring_wd.index.hour).mean()
-    #  spring_we_avg = spring_we.groupby(spring_we.index.hour).mean()
-    autumn_wd_avg = autumn_wd.groupby(autumn_wd.index.hour).mean()
-    #  autumn_we_avg = autumn_we.groupby(autumn_we.index.hour).mean()
-    winter_wd_avg = winter_wd.groupby(winter_wd.index.hour).mean()
-    #  winter_we_avg = winter_we.groupby(winter_we.index.hour).mean()
-    by_season_wd = pd.concat([summer_wd_avg, 
-                              autumn_wd_avg, 
-                              winter_wd_avg,
-                              spring_wd_avg])
-    #  by_season_we = pd.concat([summer_we_avg,
-                              #  autumn_we_avg,
-                              #  winter_we_avg,
-                              #  spring_we_avg])
-
-    by_season_wd.reset_index(drop=True, inplace=True)
-    #  by_season_we.reset_index(drop=True, inplace=True)
-
-    return by_season_wd#, by_season_we
+    processor = WaterUseDataProcessor(df)
+    return processor.groupby_season()
 
 def analyse_dtw(n_clusters, n_radius):
     """ Returns the number of members in each cluster, for radii n_radius

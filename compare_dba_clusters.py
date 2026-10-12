@@ -1,38 +1,37 @@
-import pandas as pd
 import numpy as np
+import os
+import pandas as pd
+
+import config
 import utils as ut
-from tslearn.utils import to_time_series_dataset
-from tslearn.clustering import TimeSeriesKMeans, silhouette_score
-from tslearn.preprocessing import TimeSeriesScalerMeanVariance, \
-    TimeSeriesResampler
-from tslearn.datasets import CachedDatasets
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+from clustering_engine import ClusteringConfig, TimeSeriesClusterer
+from data import DataLoader
 
-seed = 0
-np.random.seed(seed)
 
-file_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/InputFiles/')
-use_file = file_path + 'y1_SFR_hourly.pkl'
+class CompareDbaClustersRunner:
+    def __init__(self, n_cluster=5, seed=config.DEFAULT_SEED):
+        self.n_cluster = n_cluster
+        self.seed = seed
+        np.random.seed(seed)
+        self.loader = DataLoader()
+        self.output_path = os.path.expanduser(config.OUTPUT_PATH)
+        os.makedirs(self.output_path, exist_ok=True)
 
-use_df = pd.read_pickle(use_file)
-use_df = ut.clean_outliers(use_df)
-X_train = TimeSeriesScalerMeanVariance().fit_transform(use_df)
+    def run(self):
+        use_df = self.loader.load_water_use('y1_SFR_hourly.pkl', clean=True)
+        train_frame = ut.groupby_season(use_df).T
+        cfg = ClusteringConfig.dtw(
+            self.n_cluster,
+            radius=2,
+            n_init=config.DEFAULT_N_INIT,
+            max_iter_barycenter=10,
+            random_state=self.seed,
+        )
+        _, _, model = TimeSeriesClusterer(cfg).fit_predict(train_frame)
+        df = pd.DataFrame(list(zip(list(use_df.columns), model.labels_)), columns=['User', 'DBA cluster'])
+        output_file = os.path.join(self.output_path, f'compare_dba_clusters_k{self.n_cluster}.csv')
+        df.to_csv(output_file, index=False)
 
-n_cluster = 5
-X1_train = ut.groupby_season(use_df)
-X1_train = X1_train.T
-X_train = to_time_series_dataset(X1_train)
-dba_km = TimeSeriesKMeans(n_clusters=n_cluster,
-                                  n_init=5,
-                                  metric='dtw',
-                                  verbose=True,
-                                  max_iter_barycenter=10)
-y_pred = dba_km.fit_predict(X_train)
-df = pd.DataFrame(list(zip(list(use_df.columns), dba_km.labels_,
-                      columns=['User', 'DBA cluster')
-df.to_csv(f'5_clusters_monthly_results.csv')
 
-#  df2 = pd.DataFrame(list(zip(sil_coef, inertia)),
-                   #  columns=['Silhouette score', 'Inertia'])
-#  df2.to_csv('silhouette_score.csv')
+if __name__ == '__main__':
+    CompareDbaClustersRunner().run()

@@ -1,115 +1,59 @@
 import pandas as pd
 import numpy as np
+import os
 import utils as ut
 import matplotlib.pyplot as plt
-from tslearn.utils import to_time_series_dataset
-from tslearn.clustering import TimeSeriesKMeans, silhouette_score
-#  from tslearn.preprocessing import TimeSeriesScalerMeanVariance
-#  import plotly.graph_objects as go
-#  from plotly.subplots import make_subplots
-
-seed = 0
-np.random.seed(seed)
-n_sample = 100
-n_cluster = 4
-
-file_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/InputFiles/')
-use_file = file_path + 'y1_SFR_hourly.pkl'
-
-use_df = pd.read_pickle(use_file)
-use_df = ut.clean_outliers(use_df)
-use_df = use_df.sample(n=n_sample, axis=1, random_state=1)
-#  X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
-sil_coef = []
-inertia = []
-#  model = 'compare' # one of 'Kmeans', 'DBA', 'Soft-DTW', 'compare'
-#  models = ['kmeans', 'DBA', 'Soft-DTW']
-#  for model in models:
-
-X1_train = ut.groupby_year(use_df)
-X1_train = X1_train.T
-X_train = to_time_series_dataset(X1_train)
-sz = X_train.shape[1]
-dba_km = TimeSeriesKMeans(n_clusters=n_cluster,
-                          n_init=2,
-                          metric='dtw',
-                          verbose=True,
-                          max_iter_barycenter=10,
-                          metric_params =
-                          {'global_constraint':'sakoe_chiba',
-                           'sakoe_chiba_radius':3})
+import config
+from clustering_engine import ClusteringConfig, TimeSeriesClusterer
+from data import DataLoader
+from visualizer import ClusterPlotter
 
 
-print(f'running DBA k-means for {n_cluster}')
-y_pred = dba_km.fit_predict(X_train)
+class CompareEuclideanClusterRunner:
+    def __init__(self, n_sample=100, n_cluster=4, seed=config.DEFAULT_SEED):
+        self.n_sample = n_sample
+        self.n_cluster = n_cluster
+        self.seed = seed
+        np.random.seed(seed)
+        self.loader = DataLoader()
+        self.output_path = os.path.expanduser(config.OUTPUT_PATH)
+        os.makedirs(self.output_path, exist_ok=True)
 
-plt.figure()
-for yi in range(n_cluster):
-    plt.subplot(3, n_cluster, yi + 1)
-    for xx in X_train[y_pred == yi]:
-        plt.plot(xx.ravel(), "k-", alpha=.2)
-    plt.plot(dba_km.cluster_centers_[yi].ravel(), "r-")
-    plt.xlim(0, sz)
-    #  plt.ylim(-4, 4)
-    plt.text(0.55, 0.85,'Cluster %d' % (yi + 1),
-             transform=plt.gca().transAxes)
-    if yi == 1:
-        plt.title("DBA with no radius set")
-#
-dba_km = TimeSeriesKMeans(n_clusters=n_cluster,
-                          n_init=2,
-                          metric='dtw',
-                          verbose=True,
-                          max_iter_barycenter=10,
-                          metric_params =
-                          {'global_constraint':'sakoe_chiba',
-                           'sakoe_chiba_radius':1}
-                         )
+    def run(self):
+        use_df = self.loader.load_water_use('y1_SFR_hourly.pkl', clean=True)
+        use_df = use_df.sample(n=self.n_sample, axis=1, random_state=1)
+        train_frame = ut.groupby_year(use_df).T
 
-y_pred = dba_km.fit_predict(X_train)
+        windows = [3, 1, 10]
+        titles = ['DBA with no radius set', 'DBA with window of 1', 'DBA with window of 10']
+        plt.figure()
+        for row_idx, window in enumerate(windows):
+            cfg = ClusteringConfig.dtw(
+                self.n_cluster,
+                radius=window,
+                n_init=2,
+                max_iter_barycenter=10,
+                scale=False,
+            )
+            X_train, labels, model = TimeSeriesClusterer(cfg).fit_predict(train_frame)
+            self._draw_row(X_train, labels, model.cluster_centers_, row_idx, titles[row_idx])
 
-for yi in range(n_cluster):
-    plt.subplot(3, n_cluster, yi + n_cluster + 1)
-    for xx in X_train[y_pred == yi]:
-        plt.plot(xx.ravel(), "k-", alpha=.2)
-    plt.plot(dba_km.cluster_centers_[yi].ravel(), "r-")
-    plt.xlim(0, sz)
-    #  plt.ylim(-4, 4)
-    plt.text(0.55, 0.85,'Cluster %d' % (yi + 1),
-             transform=plt.gca().transAxes)
-    if yi == 1:
-        plt.title("DBA with window of 1")
+        output_file = os.path.join(self.output_path, f'compare_euclidean_cluster_windows_k{self.n_cluster}.png')
+        plt.savefig(output_file)
+
+    def _draw_row(self, X_train, labels, centers, row, row_title):
+        for yi in range(self.n_cluster):
+            ax = plt.subplot(3, self.n_cluster, yi + row * self.n_cluster + 1)
+            ClusterPlotter.draw_cluster_panel(
+                ax=ax,
+                series_dataset=X_train,
+                labels=labels,
+                center=centers[yi],
+                cluster_id=yi,
+                x_limit=X_train.shape[1],
+                title=row_title if yi == 1 else None,
+            )
 
 
-print(f'running DBA k-means for {n_cluster} with window of 5')
-dba_km = TimeSeriesKMeans(n_clusters=n_cluster,
-                          n_init=2,
-                          metric='dtw',
-                          verbose=True,
-                          max_iter_barycenter=10,
-                          metric_params={'global_constraint': 'sakoe_chiba',
-                                         'sakoe_chiba_radius': 10}
-                          )
-y_pred = dba_km.fit_predict(X_train)
-
-for yi in range(n_cluster):
-    plt.subplot(3, n_cluster, yi + 2*n_cluster + 1)
-    for xx in X_train[y_pred == yi]:
-        plt.plot(xx.ravel(), "k-", alpha=.2)
-    plt.plot(dba_km.cluster_centers_[yi].ravel(), "r-")
-    plt.xlim(0, sz)
-    #  plt.ylim(-4, 4)
-    plt.text(0.55, 0.85,'Cluster %d' % (yi + 1),
-             transform=plt.gca().transAxes)
-    if yi == 1:
-        plt.title("DBA with window of 10")
-plt.savefig('compare_DTW_windows_year.png')
-    #  df = pd.DataFrame(list(zip(list(use_df.columns), km.labels_, dba_km.labels_,
-                                       #  sdtw_km.labels_)),
-                              #  columns=['User', 'k-means cluster', 'DBA cluster',
-                                       #  'SoftDTW cluster'])
-    #  df.to_csv(f'{n_cluster}_results_{scale}.csv')
-#
-#  df2 = pd.DataFrame(list(zip(sil_coef, inertia)),
-                   #  columns=['Silhouette score', 'Inertia'])
-#  df2.to_csv('silhouette_score.csv')
+if __name__ == '__main__':
+    CompareEuclideanClusterRunner().run()

@@ -290,6 +290,3 @@ def display_time_series(attribute, period, quantile):
     return fig 
 
 app.run_server(debug=True)
-
-
->>>>>>> 46a5876d4a8cab4d9e1381458511cff9fc22c5d3

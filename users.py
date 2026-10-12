@@ -1,26 +1,30 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
+
 import pandas as pd
-import numpy as np
-import utils as ut
-from tslearn.utils import to_time_series_dataset
-from tslearn.clustering import TimeSeriesKMeans, silhouette_score
-from tslearn.preprocessing import TimeSeriesScalerMeanVariance, \
-    TimeSeriesResampler
-from tslearn.datasets import CachedDatasets
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
-seed = 0
-np.random.seed(seed)
-n_sample = 100
+import config
+from data import DataLoader
 
-file_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/InputFiles/')
-use_file = file_path + 'y1_SFR_hourly.pkl'
 
-use_df = pd.read_pickle(use_file)
-use_df = ut.clean_outliers(use_df)
-use_df = use_df.sample(n=n_sample, axis=1, random_state=1)
-user_df = pd.DataFrame(use_df.columns)
-user_df.to_csv('100users.csv')
+
+class UserSampler:
+    def __init__(self, n_sample=100, random_state=1):
+        self.n_sample = n_sample
+        self.random_state = random_state
+        self.loader = DataLoader()
+        self.output_path = os.path.expanduser(config.OUTPUT_PATH)
+        os.makedirs(self.output_path, exist_ok=True)
+
+    def run(self):
+        use_df = self.loader.load_water_use('y1_SFR_hourly.pkl', clean=True)
+        use_df = use_df.sample(n=self.n_sample, axis=1, random_state=self.random_state)
+        user_df = pd.DataFrame(use_df.columns)
+        output_file = os.path.join(self.output_path, f'user_sample_n{self.n_sample}.csv')
+        user_df.to_csv(output_file, index=False)
+
+
+if __name__ == '__main__':
+    UserSampler().run()

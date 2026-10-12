@@ -1,48 +1,40 @@
 import pandas as pd
 import numpy as np
 from utils import groupby_year
-from tslearn.utils import to_time_series_dataset
-from tslearn.clustering import TimeSeriesKMeans, silhouette_score
-from tslearn.preprocessing import TimeSeriesScalerMeanVariance, \
-    TimeSeriesResampler
-from tslearn.datasets import CachedDatasets
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+from tslearn.clustering import silhouette_score
 
-seed = 0 
+import config
+from clustering_engine import ClusteringConfig, TimeSeriesClusterer
+from data import DataLoader
+
+seed = config.DEFAULT_SEED
 np.random.seed(seed)
-# X_train, y_train, X_test, y_test= UCR_UEA_datasets().load_dataset("TwoPatterns")
-# print(y_train)
-#  X_train, y_train, X_test, y_test = CachedDatasets().load_dataset("Trace")
-#  X_train = X_train[y_train < 4]  # Keep first 3 classes
-#  np.random.shuffle(X_train)
-#  # Keep only 50 time series
-#  X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train[:50])
-#  # Make time series shorter
-#  X_train = TimeSeriesResampler(sz=40).fit_transform(X_train)
-#  sz = X_train.shape[1]
-file_path = str('~/OneDrive - North Carolina State University/Documents/Clustering+Elasticity/InputFiles/')
-use_file = file_path + 'hourly_use_SFR_y1.pkl'
-use_df = pd.read_pickle(use_file)
-use_df = use_df.sample(n=1000, axis=1, random_state=1)
-X_train = groupby_year(use_df)#[0]
-X_train = X_train.T
-X_train = to_time_series_dataset(X_train)
-#  X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
-cluster_n = [2]
-silhouette_coef = []
-inertia = []
-for i in cluster_n:
-    km = TimeSeriesKMeans(n_clusters=i,
-                          metric="euclidean",
-                          verbose=True,
-                          random_state=seed)
-    y_pred = km.fit_predict(X_train)
-    inertia.append(km.inertia_)
-    silhouette_coef.append(silhouette_score(X_train,y_pred))
 
 
-print(silhouette_coef, inertia)
+class SilhouetteComparisonRunner:
+    def __init__(self, sample_size=1000):
+        self.sample_size = sample_size
+        self.loader = DataLoader()
+
+    def run(self):
+        use_df = self.loader.load_water_use('hourly_use_SFR_y1.pkl', clean=False)
+        use_df = use_df.sample(n=self.sample_size, axis=1, random_state=1)
+        train_frame = groupby_year(use_df).T
+        cluster_n = [2]
+        silhouette_coef = []
+        inertia = []
+
+        for n_clusters in cluster_n:
+            cfg = ClusteringConfig.euclidean(n_clusters=n_clusters, random_state=seed, scale=False)
+            X_train, labels, model = TimeSeriesClusterer(cfg).fit_predict(train_frame)
+            inertia.append(model.inertia_)
+            silhouette_coef.append(silhouette_score(X_train, labels))
+
+        print(silhouette_coef, inertia)
+
+
+if __name__ == '__main__':
+    SilhouetteComparisonRunner().run()
     #  fig = make_subplots(rows=1, cols=i)
     #  for yi in range(i):
         #  for xx in X_train[y_pred == yi]:
